@@ -1,8 +1,9 @@
-import { Buffer } from 'buffer';
+export const config = { runtime: 'nodejs' };
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { url } = req.query;
@@ -16,27 +17,29 @@ export default async function handler(req, res) {
         'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
         'Referer': 'https://www.keiba.go.jp/',
+        'Cache-Control': 'no-cache',
       }
     });
     if (!response.ok) return res.status(500).json({ error: `HTTP ${response.status}` });
 
     const buffer = await response.arrayBuffer();
-    
-    // EUC-JPをShift-JIS経由でデコード
-    // Node.js環境ではicuが入っているのでこれが使える
-    let html;
-    const encodings = ['euc-jp', 'shift-jis', 'utf-8'];
-    for (const enc of encodings) {
+    let html = '';
+
+    // EUC-JP → UTF-8
+    try {
+      html = new TextDecoder('euc-jp', { fatal: true }).decode(buffer);
+    } catch(e1) {
       try {
-        const decoded = new TextDecoder(enc, { fatal: true }).decode(buffer);
-        if (/[\u3040-\u9FFF]/.test(decoded)) {
-          html = decoded;
-          break;
-        }
-      } catch(e) { continue; }
+        html = new TextDecoder('shift-jis', { fatal: true }).decode(buffer);
+      } catch(e2) {
+        html = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+      }
     }
-    if (!html) {
-      html = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+
+    // 日本語が含まれているか確認
+    if (!/[\u3040-\u9FFF]/.test(html)) {
+      // 最終手段：latin1として読んでから変換
+      html = new TextDecoder('iso-8859-1', { fatal: false }).decode(buffer);
     }
 
     return res.status(200).json(parseOdds(html, url));
@@ -51,15 +54,10 @@ function parseOdds(html, url) {
   const isTan = url.includes('OddsTanFuku');
   const items = [];
 
-  // レース名（h3タグ）
   const raceM = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/);
   const race  = raceM ? clean(raceM[1]) : '';
-
-  // 発走時刻
   const startM = html.match(/(\d{1,2}:\d{2})発走/);
   const startTime = startM ? startM[1] : '';
-
-  // オッズ時刻
   const timeM = html.match(/(\d{1,2}:\d{2})\s*(?:現在|最終)/);
   const time  = timeM ? timeM[1]+'現在' : '最終';
 
