@@ -103,6 +103,36 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 .hot-row td { background:#FFF0F0 !important; }
 .hot-row td.hl { color:#A32D2D; font-weight:500; }
 
+
+/* 履歴パネル */
+.history-toggle { font-size:12px; padding:4px 12px; border-radius:8px; border:0.5px solid #ccc;
+  background:#fff; color:#666; cursor:pointer; margin-bottom:10px; }
+.history-toggle:hover { background:#f5f4ef; }
+.history-panel { display:none; }
+.history-panel.show { display:block; }
+.history-item { background:#fff; border-radius:10px; padding:12px 14px; margin-bottom:8px;
+  border:0.5px solid rgba(0,0,0,0.1); }
+.history-item .hi-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.history-item .hi-title { font-size:13px; font-weight:500; }
+.history-item .hi-date { font-size:11px; color:#888; }
+.history-item .hi-signals { font-size:12px; color:#A32D2D; margin-bottom:6px; line-height:1.8; }
+.history-item .hi-result { display:flex; gap:6px; align-items:center; margin-top:6px; }
+.history-item .hi-result input { font-size:12px; padding:3px 8px; border:0.5px solid #ccc;
+  border-radius:6px; width:120px; height:28px; }
+.history-item .hi-result button { font-size:11px; padding:3px 10px; border-radius:6px;
+  border:0.5px solid #97C459; background:#EAF3DE; color:#27500A; cursor:pointer; height:28px; }
+.history-item .hi-saved { font-size:11px; color:#3B6D11; margin-left:4px; }
+.history-item .hi-accuracy { font-size:11px; padding:2px 8px; border-radius:99px; margin-left:6px; }
+.hi-hit { background:#EAF3DE; color:#27500A; }
+.hi-miss { background:#f5f4ef; color:#888; }
+.accuracy-summary { background:#fff; border-radius:10px; padding:12px 14px; margin-bottom:10px;
+  border:0.5px solid rgba(0,0,0,0.1); display:flex; gap:16px; flex-wrap:wrap; }
+.acc-block { text-align:center; }
+.acc-num { font-size:22px; font-weight:500; color:#1a1a18; }
+.acc-label { font-size:11px; color:#888; margin-top:2px; }
+.hi-del { font-size:11px; color:#ccc; cursor:pointer; background:none; border:none; padding:0; }
+.hi-del:hover { color:#A32D2D; }
+
 .loading { text-align:center; color:#888; padding:16px; font-size:13px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -365,6 +395,126 @@ function isConsecutiveDown(hist, n) {
   return true;
 }
 
+
+// ===== 履歴機能 =====
+function saveHotSignal(raceName, betType, signals) {
+  if (!signals.length) return;
+  const key = 'keiba_history';
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+  
+  const now = new Date();
+  const entry = {
+    id: Date.now(),
+    date: now.toLocaleDateString('ja-JP'),
+    time: now.toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}),
+    raceName,
+    betType,
+    signals,
+    result: '',
+    hit: null
+  };
+  history.unshift(entry);
+  if (history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem(key, JSON.stringify(history));
+  renderHistory();
+}
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('keiba_history') || '[]'); } catch(e) { return []; }
+}
+
+function saveResult(id, result) {
+  const history = loadHistory();
+  const entry = history.find(h => h.id === id);
+  if (!entry) return;
+  entry.result = result;
+  // 🔥シグナルの馬番が結果に含まれているか判定
+  const signalKeys = entry.signals.map(s => s.key);
+  const hit = signalKeys.some(k => result.includes(k.split('-')[0]));
+  entry.hit = hit;
+  localStorage.setItem('keiba_history', JSON.stringify(history));
+  renderHistory();
+}
+
+function deleteHistory(id) {
+  const history = loadHistory().filter(h => h.id !== id);
+  localStorage.setItem('keiba_history', JSON.stringify(history));
+  renderHistory();
+}
+
+function toggleHistory() {
+  const panel = document.getElementById('historyPanel');
+  panel.classList.toggle('show');
+  if (panel.classList.contains('show')) renderHistory();
+}
+
+function renderHistory() {
+  const history = loadHistory();
+  const list = document.getElementById('historyList');
+  const empty = document.getElementById('historyEmpty');
+  const summary = document.getElementById('accuracySummary');
+
+  if (!history.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    summary.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // 精度集計
+  const rated = history.filter(h => h.hit !== null);
+  const hits  = rated.filter(h => h.hit).length;
+  const hitRate = rated.length ? Math.round(hits/rated.length*100) : 0;
+  summary.innerHTML = `
+    <div class="acc-block"><div class="acc-num">${history.length}</div><div class="acc-label">総シグナル数</div></div>
+    <div class="acc-block"><div class="acc-num">${rated.length}</div><div class="acc-label">結果入力済</div></div>
+    <div class="acc-block"><div class="acc-num" style="color:${hitRate>=50?'#3B6D11':'#A32D2D'}">${hitRate}%</div><div class="acc-label">🔥的中率</div></div>
+    <div class="acc-block"><div class="acc-num">${hits}</div><div class="acc-label">的中数</div></div>
+  `;
+
+  list.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div class="hi-header">
+        <div class="hi-title">${h.raceName} <span style="font-size:11px;color:#888;font-weight:400">[${h.betType}]</span></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="hi-date">${h.date} ${h.time}</div>
+          <button class="hi-del" onclick="deleteHistory(${h.id})">✕</button>
+        </div>
+      </div>
+      <div class="hi-signals">
+        ${h.signals.map(s=>`🔥 ${s.label}：${s.history.join(' → ')}（-${s.totalPct}%）`).join('<br>')}
+      </div>
+      <div class="hi-result">
+        <input type="text" placeholder="結果入力（例: 3-1-4）" value="${h.result||''}"
+          id="result_${h.id}" onkeydown="if(event.key==='Enter')saveResult(${h.id},this.value)"/>
+        <button onclick="saveResult(${h.id},document.getElementById('result_${h.id}').value)">保存</button>
+        ${h.hit!==null ? `<span class="hi-accuracy ${h.hit?'hi-hit':'hi-miss'}">${h.hit?'✓ 的中':'✗ 不的中'}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// renderTableでhot検知時に自動保存
+function autoSaveHotSignals() {
+  if (!latestData.length) return;
+  const hotSignals = latestData
+    .filter(it => {
+      const hist = oddsHistory[it.key];
+      return hist && hist.length >= 2 && isHot(hist);
+    })
+    .map(it => {
+      const hist = oddsHistory[it.key];
+      const totalPct = ((hist[0]-hist[hist.length-1])/hist[0]*100).toFixed(1);
+      return { key:it.key, label:it.label, history:hist.map(v=>v.toFixed(1)), totalPct };
+    });
+  if (hotSignals.length > 0) {
+    const raceName = document.getElementById('raceName').textContent || 'レース不明';
+    saveHotSignal(raceName, BET_LABEL[currentBet], hotSignals);
+  }
+}
+
 function isHot(hist) {
   if (hist.length < 2) return false;
   // 直近1回で10%以上急落
@@ -460,7 +610,7 @@ function renderTable(){
   const alerts=rows.filter(r=>r.p<=-aThresh);
   const banner=document.getElementById('alertBanner');
   const hotItems = rows.filter(r => isHot(r.hist));
-  if(hotItems.length) { playAlert(); }
+  if(hotItems.length) { playAlert(); autoSaveHotSignals(); }
   if(alerts.length){
     banner.classList.add('show');
     document.getElementById('alertList').innerHTML=alerts.map(r=>`${r.it.label}：${r.p.toFixed(1)}%（${r.prev.toFixed(1)} → ${r.cur.toFixed(1)}）`).join('<br>');
@@ -500,6 +650,17 @@ document.getElementById('consecutiveFilter').addEventListener('change',renderTab
     </div>
     <div class="modal-meta" id="modalMeta"></div>
     <div class="chart-wrap"><canvas id="modalChart"></canvas></div>
+  </div>
+</div>
+
+
+<!-- 履歴パネル -->
+<div style="margin-top:20px;">
+  <button class="history-toggle" onclick="toggleHistory()">📋 過去の🔥シグナル履歴</button>
+  <div class="history-panel" id="historyPanel">
+    <div class="accuracy-summary" id="accuracySummary"></div>
+    <div id="historyList"></div>
+    <div id="historyEmpty" style="text-align:center;color:#888;font-size:13px;padding:16px;">履歴はまだありません</div>
   </div>
 </div>
 
