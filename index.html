@@ -142,8 +142,8 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 <div class="card">
   <div class="timer-row">
     <div class="timer-block"><div class="timer-label">発走まで</div><div class="timer-val" id="tMain">--:--</div></div>
-    <div class="timer-block"><div class="timer-label">20分前取得</div><div class="timer-val" id="t20">--:--</div></div>
-    <div class="timer-block"><div class="timer-label">5分前取得</div><div class="timer-val" id="t5">--:--</div></div>
+    <div class="timer-block"><div class="timer-label">自動取得開始まで</div><div class="timer-val" id="t20">--:--</div></div>
+    <div class="timer-block"><div class="timer-label">締切まで</div><div class="timer-val" id="t5">--:--</div></div>
     <div class="timer-block"><div class="timer-label">取得回数</div><div class="timer-val" id="fetchCount">0</div></div>
   </div>
 </div>
@@ -302,10 +302,10 @@ function playAlert(){
 
 function startAuto(){
   if(!selectedBaba){setStatus('先にレースを選んでください','s-err');return;}
-  isAuto=true; resetData();
+  isAuto=true; _lastAutoFetch=0; resetData();
   document.getElementById('btnStart').disabled=true;
   document.getElementById('btnStop').disabled=false;
-  setStatus('自動取得モード稼働中 — 20分前・5分前に自動取得します','s-run');
+  setStatus('自動取得モード稼働中 — 発走20分前から1分ごとに自動取得します','s-run');
 }
 function stopAuto(){
   isAuto=false;
