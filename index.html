@@ -88,8 +88,24 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 .spark { display:flex; gap:2px; align-items:flex-end; height:22px; }
 .sb { width:6px; border-radius:2px 2px 0 0; }
 .empty { text-align:center; color:#888; padding:24px 0; font-size:13px; }
+
+/* グラフモーダル */
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:#fff; border-radius:16px; padding:20px; width:90%; max-width:560px; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.modal-title { font-size:15px; font-weight:500; }
+.modal-close { font-size:20px; cursor:pointer; color:#888; background:none; border:none; padding:0 4px; }
+.modal-meta { font-size:11px; color:#888; margin-bottom:12px; }
+.chart-wrap { position:relative; height:220px; }
+.hot-badge { display:inline-block; background:#A32D2D; color:#fff; font-size:11px; padding:2px 8px; border-radius:99px; margin-left:6px; animation:hotpulse 1s infinite; }
+@keyframes hotpulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.hot-row td { background:#FFF0F0 !important; }
+.hot-row td.hl { color:#A32D2D; font-weight:500; }
+
 .loading { text-align:center; color:#888; padding:16px; font-size:13px; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </head>
 <body>
 <h1>🏇 地方競馬 オッズ下降モニター</h1>
@@ -348,6 +364,71 @@ function isConsecutiveDown(hist, n) {
   }
   return true;
 }
+
+function isHot(hist) {
+  if (hist.length < 2) return false;
+  // 直近1回で10%以上急落
+  const last = (hist[hist.length-2] - hist[hist.length-1]) / hist[hist.length-2] * 100;
+  if (last >= 10) return true;
+  // 直近3回で合計15%以上下落
+  if (hist.length >= 4) {
+    const total = (hist[hist.length-4] - hist[hist.length-1]) / hist[hist.length-4] * 100;
+    if (total >= 15) return true;
+  }
+  return false;
+}
+
+let _chartInstance = null;
+function showChart(key, label) {
+  const hist = oddsHistory[key];
+  if (!hist || hist.length < 2) return;
+  const hot = isHot(hist);
+  document.getElementById('modalTitle').innerHTML =
+    label + (hot ? '<span class="hot-badge">🔥 急落中</span>' : '');
+  const pct = ((hist[0] - hist[hist.length-1]) / hist[0] * 100).toFixed(1);
+  document.getElementById('modalMeta').textContent =
+    `取得${hist.length}回　${hist[0].toFixed(1)} → ${hist[hist.length-1].toFixed(1)}（合計 -${pct}%）`;
+  if (_chartInstance) _chartInstance.destroy();
+  const ctx = document.getElementById('modalChart').getContext('2d');
+  const color = hot ? '#E24B4A' : '#185FA5';
+  _chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hist.map((_,i) => `${i+1}回目`),
+      datasets: [{
+        label: 'オッズ',
+        data: hist,
+        borderColor: color,
+        backgroundColor: hot ? 'rgba(226,75,74,0.08)' : 'rgba(24,95,165,0.08)',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: color,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          reverse: false,
+          ticks: { font: { size: 11 } }
+        },
+        x: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+  document.getElementById('chartModal').classList.add('show');
+}
+
+function closeModal(e) {
+  if (e.target.id === 'chartModal') {
+    document.getElementById('chartModal').classList.remove('show');
+  }
+}
+
 function pctChange(h){if(h.length<2)return 0;return(h[h.length-1]-h[h.length-2])/h[h.length-2]*100;}
 function sparkline(hist,isAlert){
   if(hist.length<2)return'<span style="color:#aaa;font-size:11px">-</span>';
@@ -378,6 +459,8 @@ function renderTable(){
 
   const alerts=rows.filter(r=>r.p<=-aThresh);
   const banner=document.getElementById('alertBanner');
+  const hotItems = rows.filter(r => isHot(r.hist));
+  if(hotItems.length) { playAlert(); }
   if(alerts.length){
     banner.classList.add('show');
     document.getElementById('alertList').innerHTML=alerts.map(r=>`${r.it.label}：${r.p.toFixed(1)}%（${r.prev.toFixed(1)} → ${r.cur.toFixed(1)}）`).join('<br>');
@@ -390,7 +473,8 @@ function renderTable(){
 
   rows.forEach(({it,hist,cur,prev,p})=>{
     const isAlert=p<=-aThresh,mark=isAlert?' 🚨':'',tr=document.createElement('tr');
-    tr.className=isAlert?'ar':'';
+    const hot = isHot(hist);
+    tr.className = hot ? 'ar hot-row' : (isAlert ? 'ar' : '');
     if(isTan){
       const[num,...rest]=it.label.split(' ');
       tr.innerHTML=`<td><span class="nb${isAlert?' a':''}">${num}</span></td><td class="${isAlert?'hl':''}">${rest.join(' ')}${mark}</td><td style="color:#888">${prev!==null?prev.toFixed(1):'-'}</td><td class="${isAlert?'hl':''}" style="font-weight:500">${cur.toFixed(1)}</td><td><span class="badge ${isAlert?'bda':'bd'}">↓</span></td><td class="${isAlert?'pda':'pd'}">${prev!==null?p.toFixed(1)+'%':'-'}</td><td><div class="spark">${sparkline(hist,isAlert)}</div></td>`;
@@ -406,5 +490,18 @@ document.getElementById('threshSelect').addEventListener('change',renderTable);
 document.getElementById('alertThresh').addEventListener('change',renderTable);
 document.getElementById('consecutiveFilter').addEventListener('change',renderTable);
 </script>
+
+<!-- グラフモーダル -->
+<div class="modal-overlay" id="chartModal" onclick="closeModal(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" onclick="document.getElementById('chartModal').classList.remove('show')">✕</button>
+    </div>
+    <div class="modal-meta" id="modalMeta"></div>
+    <div class="chart-wrap"><canvas id="modalChart"></canvas></div>
+  </div>
+</div>
+
 </body>
 </html>
