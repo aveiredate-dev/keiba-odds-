@@ -18,8 +18,23 @@ export default async function handler(req, res) {
     });
     if (!response.ok) return res.status(500).json({ error: `HTTP ${response.status}` });
 
+    // Content-Typeからエンコーディング判定
+    const contentType = response.headers.get('content-type') || '';
     const buffer = await response.arrayBuffer();
-    const html = new TextDecoder('euc-jp').decode(buffer);
+    
+    let html;
+    // まずEUC-JPで試す
+    try {
+      const eucDecoder = new TextDecoder('euc-jp');
+      html = eucDecoder.decode(buffer);
+      // 文字化けチェック：日本語が含まれているか
+      if (!/[\u3040-\u9FFF]/.test(html)) {
+        html = new TextDecoder('utf-8').decode(buffer);
+      }
+    } catch(e) {
+      html = new TextDecoder('utf-8').decode(buffer);
+    }
+
     return res.status(200).json(parseOdds(html, url));
   } catch(e) {
     return res.status(500).json({ error: e.message });
@@ -31,7 +46,9 @@ function clean(s) { return s.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim(); 
 function parseOdds(html, url) {
   const isTan = url.includes('OddsTanFuku');
   const items = [];
-  const race = (html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/) || ['',''])[1];
+
+  const raceM = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/);
+  const race  = raceM ? clean(raceM[1]) : '';
   const timeM = html.match(/(\d{1,2}:\d{2})\s*(?:現在|最終)/);
   const time  = timeM ? timeM[1]+'現在' : '最終';
 
@@ -44,7 +61,7 @@ function parseOdds(html, url) {
       const lm = m[2].match(/>([^<]+)<\/a>/);
       const name = lm ? lm[1].trim() : clean(m[2]);
       const odds = parseFloat(m[3]);
-      if (!name || isNaN(odds)) continue;
+      if (!name || isNaN(odds) || odds <= 0) continue;
       items.push({ key:num, label:`${num} ${name}`, odds });
       seen.add(num);
     }
@@ -53,12 +70,12 @@ function parseOdds(html, url) {
     const seen = new Set(); let m;
     while ((m = re.exec(html)) !== null) {
       const combo = m[1].trim(), odds = parseFloat(m[2]);
-      if (seen.has(combo)||isNaN(odds)) continue;
+      if (seen.has(combo)||isNaN(odds)||odds<=0) continue;
       items.push({ key:combo, label:combo, odds });
       seen.add(combo);
     }
     items.sort((a,b)=>a.odds-b.odds);
     items.splice(30);
   }
-  return { race:clean(race), time, items };
+  return { race, time, items };
 }
