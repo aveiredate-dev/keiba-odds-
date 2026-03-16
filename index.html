@@ -123,6 +123,12 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
     <option value="10" selected>10%以上下降</option>
     <option value="20">20%以上下降</option>
   </select>
+  <label>📉連続</label>
+  <select id="consecutiveFilter" style="height:28px;font-size:12px;">
+    <option value="0">指定なし</option>
+    <option value="2">2回以上連続</option>
+    <option value="3">3回以上連続</option>
+  </select>
   <label>🚨</label>
   <select id="alertThresh" style="height:28px;font-size:12px;">
     <option value="20" selected>20%以上</option>
@@ -218,7 +224,7 @@ function selectVenue(venue) {
     return `<div class="race-card${r.special?' special':''}${isDone?' done':''}${isActive?' active':''}"
       onclick="selectRace('${venue.babaCode}','${venue.babaName}',${r.rno},'${r.time}',this)">
       <div class="rno">${r.rno}R</div>
-      <div class="rtime">${r.time}</div><div class="rname">${r.raceName||""}</div>
+      <div class="rtime">${r.time}</div>
     </div>`;
   }).join('');
 }
@@ -335,6 +341,13 @@ async function doFetch(label){
   }catch(e){setStatus(`❌ 取得失敗: ${e.message}`,'s-err');}
 }
 
+function isConsecutiveDown(hist, n) {
+  if (hist.length < n + 1) return false;
+  for (let i = hist.length - n; i < hist.length; i++) {
+    if (hist[i] >= hist[i-1]) return false;
+  }
+  return true;
+}
 function pctChange(h){if(h.length<2)return 0;return(h[h.length-1]-h[h.length-2])/h[h.length-2]*100;}
 function sparkline(hist,isAlert){
   if(hist.length<2)return'<span style="color:#aaa;font-size:11px">-</span>';
@@ -356,7 +369,12 @@ function renderTable(){
   const rows=latestData.map(it=>{
     const hist=oddsHistory[it.key]||[it.odds],cur=hist[hist.length-1],prev=hist.length>=2?hist[hist.length-2]:null,p=prev!==null?pctChange(hist):0;
     return{it,hist,cur,prev,p};
-  }).filter(r=>r.p<-0.4&&Math.abs(r.p)>=thresh).sort((a,b)=>a.p-b.p);
+  }).filter(r=>{
+      if(r.p>=-0.4||Math.abs(r.p)<thresh) return false;
+      const consec=parseInt(document.getElementById('consecutiveFilter').value);
+      if(consec>0 && !isConsecutiveDown(r.hist, consec)) return false;
+      return true;
+    }).sort((a,b)=>a.p-b.p);
 
   const alerts=rows.filter(r=>r.p<=-aThresh);
   const banner=document.getElementById('alertBanner');
@@ -386,6 +404,7 @@ function renderTable(){
 function setStatus(msg,cls){const el=document.getElementById('statusBar');el.textContent=msg;el.className='status '+cls;}
 document.getElementById('threshSelect').addEventListener('change',renderTable);
 document.getElementById('alertThresh').addEventListener('change',renderTable);
+document.getElementById('consecutiveFilter').addEventListener('change',renderTable);
 </script>
 </body>
 </html>
