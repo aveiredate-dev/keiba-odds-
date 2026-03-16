@@ -135,6 +135,24 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 
 
 /* マルチレース監視タブ */
+
+/* パスワード画面 */
+.pw-screen { display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+  background:#f5f4ef; z-index:9999; align-items:center; justify-content:center; }
+.pw-screen.show { display:flex; }
+.pw-box { background:#fff; border-radius:16px; padding:32px; width:90%; max-width:360px;
+  border:0.5px solid rgba(0,0,0,0.1); text-align:center; }
+.pw-logo { font-size:32px; margin-bottom:12px; }
+.pw-title { font-size:16px; font-weight:500; margin-bottom:4px; }
+.pw-sub { font-size:12px; color:#888; margin-bottom:20px; }
+.pw-input { width:100%; font-size:14px; padding:10px 14px; border:0.5px solid #ccc;
+  border-radius:10px; margin-bottom:10px; text-align:center; letter-spacing:2px; }
+.pw-input:focus { outline:none; border-color:#1a1a18; }
+.pw-btn { width:100%; font-size:14px; padding:10px; border-radius:10px; border:none;
+  background:#1a1a18; color:#fff; cursor:pointer; font-weight:500; }
+.pw-btn:hover { opacity:0.85; }
+.pw-err { font-size:12px; color:#A32D2D; margin-top:8px; display:none; }
+
 .monitor-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
 .monitor-tab { font-size:12px; padding:5px 12px; border-radius:99px; border:0.5px solid #ccc;
   cursor:pointer; background:#fff; color:#666; position:relative; white-space:nowrap; }
@@ -153,6 +171,20 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </head>
 <body>
+
+<!-- パスワード画面 -->
+<div class="pw-screen" id="pwScreen">
+  <div class="pw-box">
+    <div class="pw-logo">🏇</div>
+    <div class="pw-title">地方競馬 オッズモニター</div>
+    <div class="pw-sub">アクセスキーを入力してください</div>
+    <input class="pw-input" type="password" id="pwInput" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter')checkPassword()"/>
+    <button class="pw-btn" onclick="checkPassword()">ログイン</button>
+    <div class="pw-err" id="pwErr">アクセスキーが違います</div>
+  </div>
+</div>
+
 <h1>🏇 地方競馬 オッズ下降モニター</h1>
 
 <!-- レース選択 -->
@@ -230,6 +262,44 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 <div id="emptyState" class="empty" style="display:none">下降している組み合わせはありません</div>
 
 <script>
+
+// ===== パスワード認証 =====
+const ACCESS_KEY = 'keibaoddsm';
+
+function checkPassword() {
+  const input = document.getElementById('pwInput').value;
+  if (input === ACCESS_KEY) {
+    localStorage.setItem('keiba_auth', ACCESS_KEY);
+    document.getElementById('pwScreen').classList.remove('show');
+    document.getElementById('pwErr').style.display = 'none';
+    init();
+  } else {
+    document.getElementById('pwErr').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+
+function checkAuth() {
+  const saved = localStorage.getItem('keiba_auth');
+  if (saved === ACCESS_KEY) {
+    init();
+  } else {
+    document.getElementById('pwScreen').classList.add('show');
+    setTimeout(() => document.getElementById('pwInput').focus(), 100);
+  }
+}
+
+function init() {
+  // 既存の初期化処理
+  renderMonitorTabs();
+  loadRaces();
+  setInterval(tick, 1000);
+}
+
+// 起動時に認証チェック
+checkAuth();
+
 const BET_URL  ={tan:'OddsTanFuku',umaren:'OddsUmLenFuku',umatan:'OddsUmLenTan',wide:'OddsWide',sanrenfuku:'Odds3LenFuku',sanrentan:'Odds3LenTan'};
 const BET_LABEL={tan:'単勝',umaren:'馬連',umatan:'馬単',wide:'ワイド',sanrenfuku:'三連複',sanrentan:'三連単'};
 
@@ -239,13 +309,11 @@ let selectedBaba=null, selectedRno=null, selectedTime=null;
 let venuesData=[];
 
 // 今日の日付セット
-renderMonitorTabs();
 const td=new Date();
 document.getElementById('dateInput').value=
   `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
 
-// 起動時に自動読み込み
-loadRaces();
+// 起動時の自動読み込みはinit()で行う
 
 async function loadRaces() {
   const date = document.getElementById('dateInput').value.replace(/-/g,'/');
