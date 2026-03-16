@@ -7,113 +7,131 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
-       background: #f5f4ef; color: #1a1a18; font-size: 14px; padding: 16px; max-width: 860px; margin: 0 auto; }
-h1 { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
-.sec { font-size: 11px; font-weight: 500; color: #888; letter-spacing: .05em; margin: 12px 0 5px; }
-.card { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; border: 0.5px solid rgba(0,0,0,0.1); }
-.form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-.field { display: flex; flex-direction: column; gap: 3px; }
-.field label { font-size: 11px; color: #888; font-weight: 500; }
-select, input[type=date], input[type=number], input[type=time] {
-  font-size: 13px; padding: 5px 8px; border: 0.5px solid #ccc;
-  border-radius: 8px; background: #fff; color: #1a1a18; height: 34px; }
-input[type=number] { width: 70px; }
-input[type=date]   { width: 148px; }
-input[type=time]   { width: 96px; }
-.bet-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
-.bet-tab { font-size: 12px; padding: 4px 12px; border-radius: 99px;
-           border: 0.5px solid #ccc; cursor: pointer; background: transparent; color: #666; }
-.bet-tab.active { background: #E6F1FB; color: #185FA5; border-color: #85B7EB; font-weight: 500; }
-.filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-.filter-row label { font-size: 12px; color: #666; }
-.timer-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.timer-block { flex: 1; min-width: 80px; text-align: center; padding: 10px; background: #f5f4ef; border-radius: 8px; }
-.timer-label { font-size: 10px; color: #888; margin-bottom: 3px; }
-.timer-val { font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; color: #1a1a18; }
-.timer-val.warn { color: #BA7517; }
-.timer-val.alrt { color: #A32D2D; }
-.timer-val.done { color: #3B6D11; }
-.btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.btn { flex: 1; font-size: 13px; height: 40px; border-radius: 10px; cursor: pointer; font-weight: 500; border: 0.5px solid #ccc; background: #fff; color: #333; }
-.btn:hover:not(:disabled) { opacity: 0.85; }
-.btn:disabled { opacity: 0.4; cursor: default; }
-.btn.start { background: #EAF3DE; color: #27500A; border-color: #97C459; }
-.btn.stop  { background: #FCEBEB; color: #791F1F; border-color: #F09595; }
-.btn.now   { background: #E6F1FB; color: #185FA5; border-color: #85B7EB; }
-.status { font-size: 12px; padding: 7px 12px; border-radius: 8px; margin-bottom: 10px; }
-.s-idle { background: #f5f4ef; color: #888; }
-.s-run  { background: #EAF3DE; color: #27500A; }
-.s-err  { background: #FCEBEB; color: #A32D2D; }
-.alert-banner { display:none; padding: 10px 14px; border-radius: 10px; margin-bottom: 10px; background: #FCEBEB; border: 1px solid #F09595; }
-.alert-banner.show { display: block; }
-.alert-banner .at { font-size: 13px; font-weight: 500; color: #791F1F; margin-bottom: 3px; }
-.alert-banner .al { font-size: 12px; color: #A32D2D; line-height: 1.8; }
-.race-name { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
-.race-meta { font-size: 11px; color: #888; margin-bottom: 8px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { text-align: left; padding: 5px 8px; color: #888; font-weight: 500; border-bottom: 0.5px solid rgba(0,0,0,0.1); font-size: 11px; white-space: nowrap; }
-td { padding: 8px; border-bottom: 0.5px solid rgba(0,0,0,0.06); vertical-align: middle; }
-tr:hover td { background: #f9f8f4; }
-tr.ar td { background: #FFF5F5; }
-tr.ar td.hl { color: #A32D2D; font-weight: 500; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
-.bd  { background: #EAF3DE; color: #3B6D11; }
-.bda { background: #3B6D11; color: #fff; }
-.pd  { color: #3B6D11; font-size: 12px; }
-.pda { color: #27500A; font-size: 12px; font-weight: 500; }
-.nb { display: inline-block; min-width: 22px; height: 22px; border-radius: 4px; background: #f0efe9; text-align: center; line-height: 22px; font-size: 11px; color: #888; padding: 0 3px; }
-.nb.a { background: #FCEBEB; color: #A32D2D; }
-.spark { display: flex; gap: 2px; align-items: flex-end; height: 22px; }
-.sb { width: 6px; border-radius: 2px 2px 0 0; }
-.empty { text-align: center; color: #888; padding: 24px 0; font-size: 13px; }
-.url-box { font-size: 10px; color: #888; word-break: break-all; padding: 5px 8px; background: #f5f4ef; border-radius: 6px; margin-bottom: 10px; }
-.auto-badge { font-size: 10px; background: #EAF3DE; color: #3B6D11; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+       background: #f5f4ef; color: #1a1a18; font-size: 14px; padding: 16px; max-width: 900px; margin: 0 auto; }
+h1 { font-size: 16px; font-weight: 500; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.sec { font-size: 11px; font-weight: 500; color: #888; letter-spacing:.05em; margin: 12px 0 5px; }
+.card { background:#fff; border-radius:12px; padding:14px 16px; margin-bottom:10px; border:0.5px solid rgba(0,0,0,0.1); }
+
+/* レース選択 */
+.date-row { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+.date-row input[type=date] { font-size:13px; padding:5px 8px; border:0.5px solid #ccc; border-radius:8px; height:34px; }
+.btn-sm { font-size:12px; padding:4px 12px; border-radius:8px; border:0.5px solid #85B7EB; background:#E6F1FB; color:#185FA5; cursor:pointer; height:30px; }
+.btn-sm:hover { opacity:0.85; }
+
+.venue-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.venue-tab { font-size:13px; padding:6px 14px; border-radius:99px; border:0.5px solid #ccc; cursor:pointer; background:#fff; color:#666; }
+.venue-tab.active { background:#1a1a18; color:#fff; border-color:#1a1a18; font-weight:500; }
+
+.race-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; }
+.race-card { background:#f5f4ef; border-radius:10px; padding:10px 12px; cursor:pointer; border:1.5px solid transparent; transition:all .15s; }
+.race-card:hover { background:#fff; border-color:#ccc; }
+.race-card.active { background:#fff; border-color:#1a1a18; }
+.race-card.done { opacity:0.45; }
+.race-card .rno { font-size:11px; color:#888; margin-bottom:2px; }
+.race-card .rtime { font-size:18px; font-weight:500; color:#1a1a18; }
+.race-card .rname { font-size:10px; color:#888; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.race-card.special .rtime { color:#185FA5; }
+.race-card.special .rno::after { content:'特'; font-size:9px; background:#E6F1FB; color:#185FA5; padding:1px 4px; border-radius:3px; margin-left:4px; }
+
+/* 式別 */
+.bet-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
+.bet-tab { font-size:12px; padding:4px 12px; border-radius:99px; border:0.5px solid #ccc; cursor:pointer; background:transparent; color:#666; }
+.bet-tab.active { background:#E6F1FB; color:#185FA5; border-color:#85B7EB; font-weight:500; }
+
+.filter-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.filter-row label { font-size:12px; color:#666; }
+select { font-size:13px; padding:4px 8px; border:0.5px solid #ccc; border-radius:8px; background:#fff; color:#1a1a18; height:32px; }
+
+/* タイマー */
+.timer-row { display:flex; gap:8px; flex-wrap:wrap; }
+.timer-block { flex:1; min-width:80px; text-align:center; padding:10px; background:#f5f4ef; border-radius:8px; }
+.timer-label { font-size:10px; color:#888; margin-bottom:3px; }
+.timer-val { font-size:20px; font-weight:500; font-variant-numeric:tabular-nums; }
+.timer-val.warn { color:#BA7517; }
+.timer-val.alrt { color:#A32D2D; }
+.timer-val.done { color:#3B6D11; }
+
+/* ボタン */
+.btn-row { display:flex; gap:8px; margin-bottom:10px; }
+.btn { flex:1; font-size:13px; height:40px; border-radius:10px; cursor:pointer; font-weight:500; border:0.5px solid #ccc; background:#fff; color:#333; }
+.btn:hover:not(:disabled) { opacity:.85; }
+.btn:disabled { opacity:.35; cursor:default; }
+.btn.start { background:#EAF3DE; color:#27500A; border-color:#97C459; }
+.btn.stop  { background:#FCEBEB; color:#791F1F; border-color:#F09595; }
+.btn.now   { background:#E6F1FB; color:#185FA5; border-color:#85B7EB; }
+
+.status { font-size:12px; padding:7px 12px; border-radius:8px; margin-bottom:10px; }
+.s-idle { background:#f5f4ef; color:#888; }
+.s-run  { background:#EAF3DE; color:#27500A; }
+.s-err  { background:#FCEBEB; color:#A32D2D; }
+
+.alert-banner { display:none; padding:10px 14px; border-radius:10px; margin-bottom:10px; background:#FCEBEB; border:1px solid #F09595; }
+.alert-banner.show { display:block; }
+.alert-banner .at { font-size:13px; font-weight:500; color:#791F1F; margin-bottom:3px; }
+.alert-banner .al { font-size:12px; color:#A32D2D; line-height:1.8; }
+
+.race-name { font-size:14px; font-weight:500; margin-bottom:2px; }
+.race-meta { font-size:11px; color:#888; margin-bottom:8px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; padding:5px 8px; color:#888; font-weight:500; border-bottom:0.5px solid rgba(0,0,0,0.1); font-size:11px; white-space:nowrap; }
+td { padding:8px; border-bottom:0.5px solid rgba(0,0,0,0.06); vertical-align:middle; }
+tr:hover td { background:#f9f8f4; }
+tr.ar td { background:#FFF5F5; }
+tr.ar td.hl { color:#A32D2D; font-weight:500; }
+.badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:99px; font-weight:500; }
+.bd  { background:#EAF3DE; color:#3B6D11; }
+.bda { background:#3B6D11; color:#fff; }
+.pd  { color:#3B6D11; font-size:12px; }
+.pda { color:#27500A; font-size:12px; font-weight:500; }
+.nb { display:inline-block; min-width:22px; height:22px; border-radius:4px; background:#f0efe9; text-align:center; line-height:22px; font-size:11px; color:#888; padding:0 3px; }
+.nb.a { background:#FCEBEB; color:#A32D2D; }
+.spark { display:flex; gap:2px; align-items:flex-end; height:22px; }
+.sb { width:6px; border-radius:2px 2px 0 0; }
+.empty { text-align:center; color:#888; padding:24px 0; font-size:13px; }
+.loading { text-align:center; color:#888; padding:16px; font-size:13px; }
 </style>
 </head>
 <body>
-<h1>地方競馬 オッズ下降モニター</h1>
-<div class="sec">レース設定</div>
+<h1>🏇 地方競馬 オッズ下降モニター</h1>
+
+<!-- レース選択 -->
+<div class="sec">開催レース選択</div>
 <div class="card">
-  <div class="form-row">
-    <div class="field"><label>競馬場</label>
-      <select id="babaSelect">
-        <option value="3">帯広（ばんえい）</option><option value="10">盛岡</option>
-        <option value="11">水沢</option><option value="18">浦和</option>
-        <option value="19">船橋</option><option value="20">大井</option>
-        <option value="21">川崎</option><option value="22">金沢</option>
-        <option value="23">笠松</option><option value="24">名古屋</option>
-        <option value="26">園田</option><option value="27">姫路</option>
-        <option value="30">高知</option><option value="32">佐賀</option>
-      </select></div>
-    <div class="field"><label>日付</label><input type="date" id="dateInput"/></div>
-    <div class="field"><label>レース番号</label><input type="number" id="raceNo" min="1" max="12" value="1"/></div>
-    <div class="field">
-      <label>発走時刻 <span id="autoTimeBadge" class="auto-badge" style="display:none">自動取得</span></label>
-      <input type="time" id="startTime" value="15:00"/>
-    </div>
+  <div class="date-row">
+    <input type="date" id="dateInput"/>
+    <button class="btn-sm" onclick="loadRaces()">レース一覧を読み込む</button>
   </div>
+  <div id="venueTabs" class="venue-tabs"></div>
+  <div id="raceGrid" class="race-grid"><div class="loading">日付を選んで「レース一覧を読み込む」を押してください</div></div>
 </div>
+
+<!-- 式別・フィルタ -->
 <div class="sec">式別</div>
 <div class="bet-tabs">
-  <button class="bet-tab active" data-type="tan" onclick="setBet(this)">単勝</button>
-  <button class="bet-tab" data-type="umaren" onclick="setBet(this)">馬連</button>
-  <button class="bet-tab" data-type="umatan" onclick="setBet(this)">馬単</button>
-  <button class="bet-tab" data-type="wide" onclick="setBet(this)">ワイド</button>
-  <button class="bet-tab" data-type="sanrenfuku" onclick="setBet(this)">三連複</button>
-  <button class="bet-tab" data-type="sanrentan" onclick="setBet(this)">三連単</button>
+  <button class="bet-tab active" data-type="tan"        onclick="setBet(this)">単勝</button>
+  <button class="bet-tab"        data-type="umaren"     onclick="setBet(this)">馬連</button>
+  <button class="bet-tab"        data-type="umatan"     onclick="setBet(this)">馬単</button>
+  <button class="bet-tab"        data-type="wide"       onclick="setBet(this)">ワイド</button>
+  <button class="bet-tab"        data-type="sanrenfuku" onclick="setBet(this)">三連複</button>
+  <button class="bet-tab"        data-type="sanrentan"  onclick="setBet(this)">三連単</button>
 </div>
 <div class="filter-row">
   <label>フィルタ</label>
   <select id="threshSelect" style="height:28px;font-size:12px;">
-    <option value="0">全て（下降のみ）</option><option value="5">5%以上下降</option>
-    <option value="10" selected>10%以上下降</option><option value="20">20%以上下降</option>
+    <option value="0">全て（下降のみ）</option>
+    <option value="5">5%以上下降</option>
+    <option value="10" selected>10%以上下降</option>
+    <option value="20">20%以上下降</option>
   </select>
   <label>🚨</label>
   <select id="alertThresh" style="height:28px;font-size:12px;">
-    <option value="20" selected>20%以上</option><option value="30">30%以上</option><option value="50">50%以上</option>
+    <option value="20" selected>20%以上</option>
+    <option value="30">30%以上</option>
+    <option value="50">50%以上</option>
   </select>
 </div>
-<div class="url-box" id="urlBox"></div>
+
+<!-- タイマー -->
 <div class="sec">タイマー</div>
 <div class="card">
   <div class="timer-row">
@@ -123,58 +141,132 @@ tr.ar td.hl { color: #A32D2D; font-weight: 500; }
     <div class="timer-block"><div class="timer-label">取得回数</div><div class="timer-val" id="fetchCount">0</div></div>
   </div>
 </div>
+
 <div class="btn-row">
   <button class="btn start" id="btnStart" onclick="startAuto()">▶ 自動取得 開始</button>
-  <button class="btn stop" id="btnStop" onclick="stopAuto()" disabled>■ 停止</button>
-  <button class="btn now" onclick="doFetch('手動')">今すぐ取得</button>
+  <button class="btn stop"  id="btnStop"  onclick="stopAuto()" disabled>■ 停止</button>
+  <button class="btn now"   onclick="doFetch('手動')">今すぐ取得</button>
 </div>
-<div id="statusBar" class="status s-idle">「▶ 自動取得 開始」を押すと発走20分前・5分前に自動取得します</div>
+<div id="statusBar" class="status s-idle">レースを選んで「▶ 自動取得 開始」を押してください</div>
+
 <div class="alert-banner" id="alertBanner"><div class="at">🚨 急落を検知</div><div class="al" id="alertList"></div></div>
 <div id="raceName" class="race-name" style="display:none"></div>
 <div id="raceMeta" class="race-meta" style="display:none"></div>
 <table id="mainTable" style="display:none"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
 <div id="emptyState" class="empty" style="display:none">下降している組み合わせはありません</div>
+
 <script>
-const CGI_URL='/api/odds';
-const BET_URL={tan:'OddsTanFuku',umaren:'OddsUmLenFuku',umatan:'OddsUmLenTan',wide:'OddsWide',sanrenfuku:'Odds3LenFuku',sanrentan:'Odds3LenTan'};
+const BET_URL  ={tan:'OddsTanFuku',umaren:'OddsUmLenFuku',umatan:'OddsUmLenTan',wide:'OddsWide',sanrenfuku:'Odds3LenFuku',sanrentan:'Odds3LenTan'};
 const BET_LABEL={tan:'単勝',umaren:'馬連',umatan:'馬単',wide:'ワイド',sanrenfuku:'三連複',sanrentan:'三連単'};
-let currentBet='tan',oddsHistory={},latestData=[],fetchCnt=0,isAuto=false,auto20done=false,auto5done=false;
+
+let currentBet='tan', oddsHistory={}, latestData=[], fetchCnt=0;
+let isAuto=false, auto20done=false, auto5done=false;
+let selectedBaba=null, selectedRno=null, selectedTime=null;
+let venuesData=[];
+
+// 今日の日付セット
 const td=new Date();
-document.getElementById('dateInput').value=`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+document.getElementById('dateInput').value=
+  `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
 
-function buildKeibaUrl(){
-  const baba=document.getElementById('babaSelect').value,
-        date=document.getElementById('dateInput').value.replace(/-/g,'/'),
-        rno=document.getElementById('raceNo').value;
-  return `https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/${BET_URL[currentBet]}?k_raceDate=${encodeURIComponent(date)}&k_raceNo=${rno}&k_babaCode=${baba}`;
+// 起動時に自動読み込み
+loadRaces();
+
+async function loadRaces() {
+  const date = document.getElementById('dateInput').value.replace(/-/g,'/');
+  document.getElementById('raceGrid').innerHTML='<div class="loading">読み込み中...</div>';
+  document.getElementById('venueTabs').innerHTML='';
+
+  try {
+    const res  = await fetch(`/api/races?date=${encodeURIComponent(date)}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    venuesData = data.venues;
+    if (!venuesData.length) {
+      document.getElementById('raceGrid').innerHTML='<div class="loading">本日の開催情報がありません</div>';
+      return;
+    }
+    renderVenueTabs(venuesData);
+    selectVenue(venuesData[0]);
+  } catch(e) {
+    document.getElementById('raceGrid').innerHTML=`<div class="loading">読み込み失敗: ${e.message}</div>`;
+  }
 }
-function updateUrl(){document.getElementById('urlBox').textContent=buildKeibaUrl();}
-['babaSelect','dateInput','raceNo','startTime'].forEach(id=>{
-  document.getElementById(id).addEventListener('change',()=>{resetData();updateUrl();});
-  document.getElementById(id).addEventListener('input',()=>{resetData();updateUrl();});
-});
-updateUrl();
 
-function setBet(el){currentBet=el.dataset.type;document.querySelectorAll('.bet-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');resetData();updateUrl();}
+function renderVenueTabs(venues) {
+  const tabs = document.getElementById('venueTabs');
+  tabs.innerHTML = venues.map((v,i)=>
+    `<button class="venue-tab${i===0?' active':''}" onclick="selectVenueByIndex(${i},this)">${v.babaName}</button>`
+  ).join('');
+}
 
-function resetData(){oddsHistory={};latestData=[];fetchCnt=0;auto20done=false;auto5done=false;
+function selectVenueByIndex(i, el) {
+  document.querySelectorAll('.venue-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  selectVenue(venuesData[i]);
+}
+
+function selectVenue(venue) {
+  const now = new Date();
+  const grid = document.getElementById('raceGrid');
+  grid.innerHTML = venue.races.map(r => {
+    const [h,m] = r.time.split(':').map(Number);
+    const raceDate = new Date(document.getElementById('dateInput').value);
+    raceDate.setHours(h,m,0,0);
+    const isDone = raceDate < now;
+    const isActive = selectedBaba==venue.babaCode && selectedRno==r.rno;
+    return `<div class="race-card${r.special?' special':''}${isDone?' done':''}${isActive?' active':''}"
+      onclick="selectRace('${venue.babaCode}','${venue.babaName}',${r.rno},'${r.time}',this)">
+      <div class="rno">${r.rno}R</div>
+      <div class="rtime">${r.time}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectRace(babaCode, babaName, rno, time, el) {
+  selectedBaba = babaCode;
+  selectedRno  = rno;
+  selectedTime = time;
+  document.querySelectorAll('.race-card').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  resetData();
+  setStatus(`${babaName} ${rno}R（${time}発走）を選択しました`, 's-idle');
+
+  // タイマーセット
+  const date = document.getElementById('dateInput').value;
+  const [h,m] = time.split(':').map(Number);
+  window._startMs = new Date(date).setHours(h,m,0,0);
+}
+
+function buildKeibaUrl() {
+  if (!selectedBaba || !selectedRno) return null;
+  const date = document.getElementById('dateInput').value.replace(/-/g,'/');
+  return `https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/${BET_URL[currentBet]}?k_raceDate=${encodeURIComponent(date)}&k_raceNo=${selectedRno}&k_babaCode=${selectedBaba}`;
+}
+
+function setBet(el) {
+  currentBet=el.dataset.type;
+  document.querySelectorAll('.bet-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  resetData();
+}
+
+function resetData() {
+  oddsHistory={}; latestData=[]; fetchCnt=0;
+  auto20done=false; auto5done=false;
   document.getElementById('fetchCount').textContent='0';
   document.getElementById('mainTable').style.display='none';
   document.getElementById('emptyState').style.display='none';
   document.getElementById('alertBanner').classList.remove('show');
   document.getElementById('raceName').style.display='none';
-  document.getElementById('raceMeta').style.display='none';}
-
-function getStartMs(){
-  const ds=document.getElementById('dateInput').value,ts=document.getElementById('startTime').value;
-  if(!ds||!ts)return null;
-  const[h,m]=ts.split(':').map(Number),d=new Date(ds);d.setHours(h,m,0,0);return d.getTime();}
+  document.getElementById('raceMeta').style.display='none';
+}
 
 function fmt(ms){if(ms<=0)return'00:00';const s=Math.floor(ms/1000),m=Math.floor(s/60);return`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
 
 function tick(){
-  const start=getStartMs();if(!start)return;
-  const now=Date.now(),diff=start-now,d20=diff-20*60000,d5=diff-5*60000;
+  const startMs=window._startMs; if(!startMs) return;
+  const now=Date.now(),diff=startMs-now,d20=diff-20*60000,d5=diff-5*60000;
   const mEl=document.getElementById('tMain');
   mEl.textContent=diff<=0?'発走済':fmt(diff);
   mEl.className='timer-val'+(diff<=0?' done':diff<5*60000?' alrt':diff<10*60000?' warn':'');
@@ -185,37 +277,54 @@ function tick(){
   e5.textContent=d5<=0?'✓ 済':fmt(d5);
   e5.className='timer-val'+(d5<=0?' done':d5<60000?' alrt':d5<3*60000?' warn':'');
   if(isAuto){
-    if(!auto20done&&d20<=0&&diff>0){auto20done=true;doFetch('20分前 自動');}
-    if(!auto5done&&d5<=0&&diff>0){auto5done=true;doFetch('5分前 自動');}
+    if(!auto20done&&d20<=0&&diff>0){auto20done=true;doFetch('20分前 自動');playAlert();}
+    if(!auto5done &&d5 <=0&&diff>0){auto5done =true;doFetch('5分前 自動'); playAlert();}
   }
 }
-setInterval(tick,1000);tick();
+setInterval(tick,1000);
 
-function startAuto(){isAuto=true;resetData();document.getElementById('btnStart').disabled=true;document.getElementById('btnStop').disabled=false;setStatus('自動取得モード稼働中 — 20分前・5分前に自動取得します','s-run');}
-function stopAuto(){isAuto=false;document.getElementById('btnStart').disabled=false;document.getElementById('btnStop').disabled=true;setStatus('停止しました','s-idle');}
+function playAlert(){
+  try{
+    const ctx=new AudioContext();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value=880; gain.gain.value=0.3;
+    osc.start(); osc.stop(ctx.currentTime+0.3);
+  }catch(e){}
+}
+
+function startAuto(){
+  if(!selectedBaba){setStatus('先にレースを選んでください','s-err');return;}
+  isAuto=true; resetData();
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnStop').disabled=false;
+  setStatus('自動取得モード稼働中 — 20分前・5分前に自動取得します','s-run');
+}
+function stopAuto(){
+  isAuto=false;
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStop').disabled=true;
+  setStatus('停止しました','s-idle');
+}
 
 async function doFetch(label){
-  const keibaUrl=buildKeibaUrl();
+  const url=buildKeibaUrl();
+  if(!url){setStatus('先にレースを選んでください','s-err');return;}
   setStatus(`取得中... (${label})`,'s-run');
   try{
-    const res=await fetch(`${CGI_URL}?url=${encodeURIComponent(keibaUrl)}`);
+    const res=await fetch(`/api/odds?url=${encodeURIComponent(url)}`);
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     const data=await res.json();
     if(data.error)throw new Error(data.error);
     if(!data.items||!data.items.length)throw new Error('オッズデータなし（発売前の可能性）');
-
-    // 発走時刻を自動セット
-    if(data.startTime){
-      document.getElementById('startTime').value=data.startTime;
-      document.getElementById('autoTimeBadge').style.display='inline';
-    }
 
     data.items.forEach(it=>{
       if(!oddsHistory[it.key])oddsHistory[it.key]=[];
       oddsHistory[it.key].push(it.odds);
       if(oddsHistory[it.key].length>8)oddsHistory[it.key].shift();
     });
-    latestData=data.items;fetchCnt++;
+    latestData=data.items; fetchCnt++;
     document.getElementById('fetchCount').textContent=fetchCnt;
     document.getElementById('raceName').textContent=data.race||'';
     document.getElementById('raceName').style.display='block';
@@ -226,7 +335,7 @@ async function doFetch(label){
   }catch(e){setStatus(`❌ 取得失敗: ${e.message}`,'s-err');}
 }
 
-function pctChange(hist){if(hist.length<2)return 0;return(hist[hist.length-1]-hist[hist.length-2])/hist[hist.length-2]*100;}
+function pctChange(h){if(h.length<2)return 0;return(h[h.length-1]-h[h.length-2])/h[h.length-2]*100;}
 function sparkline(hist,isAlert){
   if(hist.length<2)return'<span style="color:#aaa;font-size:11px">-</span>';
   const max=Math.max(...hist),min=Math.min(...hist),range=max-min||1,col=isAlert?'#3B6D11':'#639922';
@@ -240,7 +349,10 @@ function renderTable(){
         tbody=document.getElementById('tbody'),
         thead=document.getElementById('thead');
   tbody.innerHTML='';
-  thead.innerHTML=isTan?'<tr><th>馬番</th><th>馬名</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>':'<tr><th>組合せ</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>';
+  thead.innerHTML=isTan
+    ?'<tr><th>馬番</th><th>馬名</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>'
+    :'<tr><th>組合せ</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>';
+
   const rows=latestData.map(it=>{
     const hist=oddsHistory[it.key]||[it.odds],cur=hist[hist.length-1],prev=hist.length>=2?hist[hist.length-2]:null,p=prev!==null?pctChange(hist):0;
     return{it,hist,cur,prev,p};
@@ -248,8 +360,11 @@ function renderTable(){
 
   const alerts=rows.filter(r=>r.p<=-aThresh);
   const banner=document.getElementById('alertBanner');
-  if(alerts.length){banner.classList.add('show');document.getElementById('alertList').innerHTML=alerts.map(r=>`${r.it.label}：${r.p.toFixed(1)}%（${r.prev.toFixed(1)} → ${r.cur.toFixed(1)}）`).join('<br>');}
-  else{banner.classList.remove('show');}
+  if(alerts.length){
+    banner.classList.add('show');
+    document.getElementById('alertList').innerHTML=alerts.map(r=>`${r.it.label}：${r.p.toFixed(1)}%（${r.prev.toFixed(1)} → ${r.cur.toFixed(1)}）`).join('<br>');
+    playAlert();
+  } else { banner.classList.remove('show'); }
 
   if(!rows.length){document.getElementById('mainTable').style.display='none';document.getElementById('emptyState').style.display='block';return;}
   document.getElementById('mainTable').style.display='table';
@@ -258,7 +373,8 @@ function renderTable(){
   rows.forEach(({it,hist,cur,prev,p})=>{
     const isAlert=p<=-aThresh,mark=isAlert?' 🚨':'',tr=document.createElement('tr');
     tr.className=isAlert?'ar':'';
-    if(isTan){const[num,...rest]=it.label.split(' ');
+    if(isTan){
+      const[num,...rest]=it.label.split(' ');
       tr.innerHTML=`<td><span class="nb${isAlert?' a':''}">${num}</span></td><td class="${isAlert?'hl':''}">${rest.join(' ')}${mark}</td><td style="color:#888">${prev!==null?prev.toFixed(1):'-'}</td><td class="${isAlert?'hl':''}" style="font-weight:500">${cur.toFixed(1)}</td><td><span class="badge ${isAlert?'bda':'bd'}">↓</span></td><td class="${isAlert?'pda':'pd'}">${prev!==null?p.toFixed(1)+'%':'-'}</td><td><div class="spark">${sparkline(hist,isAlert)}</div></td>`;
     }else{
       tr.innerHTML=`<td><span class="nb${isAlert?' a':''}" style="padding:0 5px">${it.label}${mark}</span></td><td style="color:#888">${prev!==null?prev.toFixed(1):'-'}</td><td class="${isAlert?'hl':''}" style="font-weight:500">${cur.toFixed(1)}</td><td><span class="badge ${isAlert?'bda':'bd'}">↓</span></td><td class="${isAlert?'pda':'pd'}">${prev!==null?p.toFixed(1)+'%':'-'}</td><td><div class="spark">${sparkline(hist,isAlert)}</div></td>`;
@@ -266,6 +382,7 @@ function renderTable(){
     tbody.appendChild(tr);
   });
 }
+
 function setStatus(msg,cls){const el=document.getElementById('statusBar');el.textContent=msg;el.className='status '+cls;}
 document.getElementById('threshSelect').addEventListener('change',renderTable);
 document.getElementById('alertThresh').addEventListener('change',renderTable);
