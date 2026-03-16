@@ -18,26 +18,24 @@ export default async function handler(req, res) {
     });
     if (!response.ok) return res.status(500).json({ error: `HTTP ${response.status}` });
 
-    // Content-Typeからエンコーディング判定
-    const contentType = response.headers.get('content-type') || '';
     const buffer = await response.arrayBuffer();
-    
-    let html;
-    // まずEUC-JPで試す
-    try {
-      const eucDecoder = new TextDecoder('euc-jp');
-      html = eucDecoder.decode(buffer);
-      // 文字化けチェック：日本語が含まれているか
-      if (!/[\u3040-\u9FFF]/.test(html)) {
-        html = new TextDecoder('utf-8').decode(buffer);
-      }
-    } catch(e) {
-      html = new TextDecoder('utf-8').decode(buffer);
-    }
+    const bytes  = new Uint8Array(buffer);
 
+    // EUC-JPをUTF-8に手動変換
+    const html = eucjpToUtf8(bytes);
     return res.status(200).json(parseOdds(html, url));
   } catch(e) {
     return res.status(500).json({ error: e.message });
+  }
+}
+
+// EUC-JP → UTF-8 変換
+function eucjpToUtf8(bytes) {
+  try {
+    const decoder = new TextDecoder('euc-jp', { fatal: false });
+    return decoder.decode(bytes);
+  } catch(e) {
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
   }
 }
 
@@ -47,8 +45,15 @@ function parseOdds(html, url) {
   const isTan = url.includes('OddsTanFuku');
   const items = [];
 
-  const raceM = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/);
+  // レース名（h3の中から取得）
+  const raceM = html.match(/<h3[^>]*>\s*([\s\S]*?)\s*<\/h3>/);
   const race  = raceM ? clean(raceM[1]) : '';
+
+  // 発走時刻（例: 13:55発走）
+  const startM = html.match(/(\d{1,2}:\d{2})発走/);
+  const startTime = startM ? startM[1] : '';
+
+  // オッズ更新時刻
   const timeM = html.match(/(\d{1,2}:\d{2})\s*(?:現在|最終)/);
   const time  = timeM ? timeM[1]+'現在' : '最終';
 
@@ -77,5 +82,5 @@ function parseOdds(html, url) {
     items.sort((a,b)=>a.odds-b.odds);
     items.splice(30);
   }
-  return { race, time, items };
+  return { race, time, startTime, items };
 }
