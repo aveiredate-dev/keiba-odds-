@@ -1,3 +1,5 @@
+import { Buffer } from 'buffer';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -7,32 +9,33 @@ export default async function handler(req, res) {
   if (!url) return res.status(400).json({ error: 'urlパラメータが必要です' });
   if (!url.includes('keiba.go.jp')) return res.status(403).json({ error: 'keiba.go.jp以外は取得できません' });
 
-  // PC版URLをスマホ版に変換（UTF-8で提供される）
-  const spUrl = url
-    .replace('www.keiba.go.jp/KeibaWeb/TodayRaceInfo/', 'sp.keiba.go.jp/KeibaWebSP/TodayRaceInfo/S_')
-    .replace('OddsTanFuku', 'OddsTanFuku')
-    .replace('OddsUmLenFuku', 'OddsUmLenFuku')
-    .replace('OddsUmLenTan', 'OddsUmLenTan')
-    .replace('OddsWide', 'OddsWide')
-    .replace('Odds3LenFuku', 'Odds3LenFuku')
-    .replace('Odds3LenTan', 'Odds3LenTan');
-
   try {
-    // まずスマホ版で試す
-    let html = await fetchUtf8(spUrl);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+        'Referer': 'https://www.keiba.go.jp/',
+      }
+    });
+    if (!response.ok) return res.status(500).json({ error: `HTTP ${response.status}` });
+
+    const buffer = await response.arrayBuffer();
     
-    // スマホ版が失敗したらPC版をEUC-JPで試す
-    if (!html) {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0',
-          'Accept-Language': 'ja',
-          'Referer': 'https://www.keiba.go.jp/',
+    // EUC-JPをShift-JIS経由でデコード
+    // Node.js環境ではicuが入っているのでこれが使える
+    let html;
+    const encodings = ['euc-jp', 'shift-jis', 'utf-8'];
+    for (const enc of encodings) {
+      try {
+        const decoded = new TextDecoder(enc, { fatal: true }).decode(buffer);
+        if (/[\u3040-\u9FFF]/.test(decoded)) {
+          html = decoded;
+          break;
         }
-      });
-      if (!response.ok) return res.status(500).json({ error: `HTTP ${response.status}` });
-      const buffer = await response.arrayBuffer();
-      // iconv-lite なしで強制UTF-8（文字化けするが構造は取れる）
+      } catch(e) { continue; }
+    }
+    if (!html) {
       html = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
     }
 
@@ -42,34 +45,14 @@ export default async function handler(req, res) {
   }
 }
 
-async function fetchUtf8(url) {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'ja',
-        'Referer': 'https://sp.keiba.go.jp/',
-      }
-    });
-    if (!response.ok) return null;
-    const text = await response.text();
-    // 日本語が含まれているか確認
-    if (/[\u3040-\u9FFF]/.test(text)) return text;
-    return null;
-  } catch(e) {
-    return null;
-  }
-}
-
 function clean(s) { return s.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim(); }
 
 function parseOdds(html, url) {
   const isTan = url.includes('OddsTanFuku');
   const items = [];
 
-  // レース名
-  const raceM = html.match(/<h[123][^>]*>([\s\S]*?)<\/h[123]>/);
+  // レース名（h3タグ）
+  const raceM = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/);
   const race  = raceM ? clean(raceM[1]) : '';
 
   // 発走時刻
@@ -81,7 +64,6 @@ function parseOdds(html, url) {
   const time  = timeM ? timeM[1]+'現在' : '最終';
 
   if (isTan) {
-    // 単勝テーブル
     const re = /<tr[^>]*>\s*<td[^>]*>\s*\d+\s*<\/td>\s*<td[^>]*>\s*(\d+)\s*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>\s*[\s\S]*?<td[^>]*>\s*([\d.]+)\s*<\/td>/g;
     const seen = new Set(); let m;
     while ((m = re.exec(html)) !== null) {
