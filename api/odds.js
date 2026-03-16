@@ -19,23 +19,66 @@ export default async function handler(req, res) {
     if (!response.ok) return res.status(500).json({ error: `HTTP ${response.status}` });
 
     const buffer = await response.arrayBuffer();
-    const bytes  = new Uint8Array(buffer);
-
-    // EUC-JPをUTF-8に手動変換
-    const html = eucjpToUtf8(bytes);
+    const bytes = new Uint8Array(buffer);
+    
+    // EUC-JPを手動でUTF-8に変換
+    const html = decodeEucJp(bytes);
     return res.status(200).json(parseOdds(html, url));
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
 }
 
-// EUC-JP → UTF-8 変換
-function eucjpToUtf8(bytes) {
+// EUC-JPバイト列をUTF-8文字列に変換
+function decodeEucJp(bytes) {
+  let result = '';
+  let i = 0;
+  while (i < bytes.length) {
+    const b = bytes[i];
+    if (b < 0x80) {
+      // ASCII
+      result += String.fromCharCode(b);
+      i++;
+    } else if (b === 0x8E) {
+      // 半角カナ (EUC-JP SS2)
+      i += 2;
+      result += '?';
+    } else if (b === 0x8F) {
+      // JIS X 0212 (EUC-JP SS3)
+      i += 3;
+      result += '?';
+    } else if (b >= 0xA1 && b <= 0xFE) {
+      // 2バイト文字
+      const b2 = bytes[i + 1];
+      if (b2 >= 0xA1 && b2 <= 0xFE) {
+        const codePoint = eucjpPairToUnicode(b, b2);
+        if (codePoint) result += String.fromCodePoint(codePoint);
+        else result += '?';
+      }
+      i += 2;
+    } else {
+      result += '?';
+      i++;
+    }
+  }
+  return result;
+}
+
+// EUC-JP 2バイトペア → Unicode変換
+function eucjpPairToUnicode(b1, b2) {
+  // EUC-JP → JIS X 0208
+  const row = b1 - 0xA0;
+  const col = b2 - 0xA0;
+  // JIS → Shift-JIS → Unicode の近似変換
+  let s1 = Math.floor((row - 1) / 2) + (row <= 62 ? 0x71 : 0xB1);
+  let s2 = col + (row % 2 === 1 ? (col > 0x3F ? 0x40 : 0x3F) : 0x9E);
+  if (s1 > 0x9F) s1 += 0x40;
+  // Shift-JIS cp932デコード（簡易版：主要範囲のみ）
   try {
-    const decoder = new TextDecoder('euc-jp', { fatal: false });
-    return decoder.decode(bytes);
+    const arr = new Uint8Array([s1, s2]);
+    return new TextDecoder('shift-jis').decode(arr).codePointAt(0);
   } catch(e) {
-    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    return null;
   }
 }
 
@@ -45,15 +88,10 @@ function parseOdds(html, url) {
   const isTan = url.includes('OddsTanFuku');
   const items = [];
 
-  // レース名（h3の中から取得）
-  const raceM = html.match(/<h3[^>]*>\s*([\s\S]*?)\s*<\/h3>/);
+  const raceM = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/);
   const race  = raceM ? clean(raceM[1]) : '';
-
-  // 発走時刻（例: 13:55発走）
   const startM = html.match(/(\d{1,2}:\d{2})発走/);
   const startTime = startM ? startM[1] : '';
-
-  // オッズ更新時刻
   const timeM = html.match(/(\d{1,2}:\d{2})\s*(?:現在|最終)/);
   const time  = timeM ? timeM[1]+'現在' : '最終';
 
