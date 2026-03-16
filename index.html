@@ -294,8 +294,7 @@ function init() {
   // 既存の初期化処理
   renderMonitorTabs();
   loadRaces();
-  setInterval(tick, 1000);
-}
+  }
 
 // 起動時に認証チェック
 checkAuth();
@@ -424,7 +423,6 @@ function tick(){
     if(!auto5done &&d5 <=0&&diff>0){auto5done =true;doFetch('5分前 自動'); playAlert();}
   }
 }
-setInterval(tick,1000);
 
 function playAlert(){
   try{
