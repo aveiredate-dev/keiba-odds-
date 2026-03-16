@@ -133,6 +133,21 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 .hi-del { font-size:11px; color:#ccc; cursor:pointer; background:none; border:none; padding:0; }
 .hi-del:hover { color:#A32D2D; }
 
+
+/* マルチレース監視タブ */
+.monitor-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+.monitor-tab { font-size:12px; padding:5px 12px; border-radius:99px; border:0.5px solid #ccc;
+  cursor:pointer; background:#fff; color:#666; position:relative; white-space:nowrap; }
+.monitor-tab.active { background:#1a1a18; color:#fff; border-color:#1a1a18; }
+.monitor-tab.hot { border-color:#E24B4A; color:#A32D2D; animation:tabpulse 1s infinite; }
+.monitor-tab.hot.active { background:#A32D2D; color:#fff; border-color:#A32D2D; }
+@keyframes tabpulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+.monitor-tab .tab-close { margin-left:6px; font-size:11px; color:#aaa; }
+.monitor-tab:hover .tab-close { color:#666; }
+.btn-add-monitor { font-size:12px; padding:5px 10px; border-radius:99px; border:1.5px dashed #ccc;
+  cursor:pointer; background:transparent; color:#888; }
+.btn-add-monitor:hover { border-color:#888; color:#444; }
+
 .loading { text-align:center; color:#888; padding:16px; font-size:13px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -184,6 +199,13 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 </div>
 
 <!-- タイマー -->
+
+<!-- マルチレース監視 -->
+<div class="sec">監視中のレース</div>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+  <div class="monitor-tabs" id="monitorTabs"></div>
+  <button class="btn-add-monitor" onclick="addCurrentRaceToMonitor()">＋ 現在のレースを追加</button>
+</div>
 <div class="sec">タイマー</div>
 <div class="card">
   <div class="timer-row">
@@ -217,6 +239,7 @@ let selectedBaba=null, selectedRno=null, selectedTime=null;
 let venuesData=[];
 
 // 今日の日付セット
+renderMonitorTabs();
 const td=new Date();
 document.getElementById('dateInput').value=
   `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
@@ -393,6 +416,146 @@ function isConsecutiveDown(hist, n) {
     if (hist[i] >= hist[i-1]) return false;
   }
   return true;
+}
+
+
+
+// ===== マルチレース監視 =====
+let monitors = []; // [{babaCode, babaName, rno, time, raceName, bet, oddsHistory, latestData, fetchCnt, isHot}]
+let activeMonitorIdx = 0;
+
+function addCurrentRaceToMonitor() {
+  if (!selectedBaba || !selectedRno) {
+    setStatus('先にレースを選んでください', 's-err');
+    return;
+  }
+  // 重複チェック
+  const exists = monitors.find(m => m.babaCode===selectedBaba && m.rno===selectedRno && m.bet===currentBet);
+  if (exists) {
+    setStatus('すでに監視中のレースです', 's-err');
+    return;
+  }
+  const monitor = {
+    babaCode: selectedBaba,
+    babaName: venuesData.find(v=>v.babaCode===selectedBaba)?.babaName || selectedBaba,
+    rno: selectedRno,
+    time: selectedTime,
+    raceName: document.getElementById('raceName').textContent || `${selectedRno}R`,
+    bet: currentBet,
+    oddsHistory: {},
+    latestData: [],
+    fetchCnt: 0,
+    isHotFlag: false,
+    auto20done: false,
+    auto5done: false,
+    lastAutoFetch: 0,
+  };
+  monitors.push(monitor);
+  activeMonitorIdx = monitors.length - 1;
+  renderMonitorTabs();
+  switchMonitor(activeMonitorIdx);
+  setStatus(`${monitor.babaName} ${monitor.rno}Rを監視に追加しました`, 's-run');
+}
+
+function renderMonitorTabs() {
+  const tabs = document.getElementById('monitorTabs');
+  if (!monitors.length) {
+    tabs.innerHTML = '<span style="font-size:12px;color:#aaa">レースを選んで「＋ 追加」してください</span>';
+    return;
+  }
+  tabs.innerHTML = monitors.map((m,i) => `
+    <button class="monitor-tab${i===activeMonitorIdx?' active':''}${m.isHotFlag?' hot':''}"
+      onclick="switchMonitor(${i})">
+      ${m.isHotFlag?'🔥 ':''}${m.babaName} ${m.rno}R
+      <span class="tab-close" onclick="removeMonitor(event,${i})">✕</span>
+    </button>
+  `).join('');
+}
+
+function switchMonitor(idx) {
+  if (idx < 0 || idx >= monitors.length) return;
+  activeMonitorIdx = idx;
+  const m = monitors[idx];
+  // 現在の表示をそのモニターに切り替え
+  selectedBaba = m.babaCode;
+  selectedRno  = m.rno;
+  selectedTime = m.time;
+  currentBet   = m.bet;
+  oddsHistory  = m.oddsHistory;
+  latestData   = m.latestData;
+  fetchCnt     = m.fetchCnt;
+  // 式別タブ更新
+  document.querySelectorAll('.bet-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.type === m.bet);
+  });
+  // タイマーリセット
+  const date = document.getElementById('dateInput').value;
+  if (m.time) {
+    const [h,mm] = m.time.split(':').map(Number);
+    window._startMs = new Date(date).setHours(h,mm,0,0);
+  }
+  document.getElementById('fetchCount').textContent = m.fetchCnt;
+  document.getElementById('raceName').textContent   = m.raceName || '';
+  document.getElementById('raceName').style.display = m.raceName ? 'block' : 'none';
+  renderMonitorTabs();
+  renderTable();
+}
+
+function removeMonitor(e, idx) {
+  e.stopPropagation();
+  monitors.splice(idx, 1);
+  if (activeMonitorIdx >= monitors.length) activeMonitorIdx = monitors.length - 1;
+  if (monitors.length > 0) switchMonitor(activeMonitorIdx);
+  else {
+    oddsHistory = {}; latestData = []; fetchCnt = 0;
+    document.getElementById('mainTable').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+  }
+  renderMonitorTabs();
+}
+
+// 全監視レースを一括自動取得
+async function fetchAllMonitors() {
+  const date = document.getElementById('dateInput').value.replace(/-/g,'/');
+  await Promise.all(monitors.map(async (m, idx) => {
+    const url = `https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/${BET_URL[m.bet]}?k_raceDate=${encodeURIComponent(date)}&k_raceNo=${m.rno}&k_babaCode=${m.babaCode}`;
+    try {
+      const res  = await fetch(`/api/odds?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (data.error || !data.items?.length) return;
+      data.items.forEach(it => {
+        if (!m.oddsHistory[it.key]) m.oddsHistory[it.key] = [];
+        m.oddsHistory[it.key].push(it.odds);
+        if (m.oddsHistory[it.key].length > 8) m.oddsHistory[it.key].shift();
+      });
+      m.latestData = data.items;
+      m.fetchCnt++;
+      m.raceName = data.race || m.raceName;
+      // hot判定
+      const hotFound = data.items.some(it => {
+        const h = m.oddsHistory[it.key];
+        return h && isHot(h);
+      });
+      if (hotFound && !m.isHotFlag) {
+        m.isHotFlag = true;
+        playAlert();
+      }
+      // アクティブなモニターなら表示更新
+      if (idx === activeMonitorIdx) {
+        oddsHistory = m.oddsHistory;
+        latestData  = m.latestData;
+        fetchCnt    = m.fetchCnt;
+        document.getElementById('fetchCount').textContent = m.fetchCnt;
+        document.getElementById('raceName').textContent   = m.raceName;
+        document.getElementById('raceName').style.display = 'block';
+        document.getElementById('raceMeta').textContent   =
+          `【${BET_LABEL[m.bet]}】${data.time}　取得: ${new Date().toLocaleTimeString('ja')}（自動）`;
+        document.getElementById('raceMeta').style.display = 'block';
+        renderTable();
+      }
+    } catch(e) {}
+  }));
+  renderMonitorTabs();
 }
 
 
