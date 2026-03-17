@@ -220,7 +220,7 @@ function selectRace(babaCode,babaName,rno,time,el){
   let firstNew=-1;
   for(const bet of selectedBets){
     if(monitors.find(mo=>mo.babaCode===babaCode&&mo.rno===rno&&mo.bet===bet))continue;
-    monitors.push({babaCode,babaName,rno,time,bet,oddsHistory:{},latestData:[],fetchCnt:0,startMs:newStartMs,isHot:false});
+    monitors.push({babaCode,babaName,rno,time,bet,bets:new Set(selectedBets),oddsHistory:{},latestData:[],fetchCnt:0,startMs:newStartMs,isHot:false});
     if(firstNew<0)firstNew=monitors.length-1;
   }
   if(firstNew<0)firstNew=monitors.findIndex(mo=>mo.babaCode===babaCode&&mo.rno===rno);
@@ -244,6 +244,7 @@ function saveCurrentToMonitor(){
   if(activeIdx<0||activeIdx>=monitors.length)return;
   const m=monitors[activeIdx];
   // 参照ではなくコピーして保存
+  m.bets=new Set(selectedBets);
   m.oddsHistory=JSON.parse(JSON.stringify(oddsHistory));
   m.latestData=latestData.slice();
   m.fetchCnt=fetchCnt;m.startMs=startMs;
@@ -259,7 +260,8 @@ function loadMonitor(idx){
   oddsHistory=JSON.parse(JSON.stringify(m.oddsHistory));
   latestData=m.latestData.slice();fetchCnt=m.fetchCnt;startMs=m.startMs;
   document.getElementById('fetchCount').textContent=fetchCnt;
-  // selectedBetsはユーザー操作で維持（リセットしない）
+  // そのモニターの式別選択を復元
+  selectedBets = new Set(m.bets || [m.bet]);
   document.querySelectorAll('.bet-tab').forEach(t=>t.classList.toggle('active',selectedBets.has(t.dataset.type)));
   if(latestData.length){document.getElementById('raceName').style.display='block';document.getElementById('raceMeta').style.display='block';}
   renderTable();renderMonitorTabs();
