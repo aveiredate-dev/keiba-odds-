@@ -371,13 +371,33 @@ function selectRace(babaCode, babaName, rno, time, el) {
   selectedTime = time;
   document.querySelectorAll('.race-card').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
-  resetData();
-  setStatus(`${babaName} ${rno}R（${time}発走）を選択しました`, 's-idle');
 
   // タイマーセット
   const date = document.getElementById('dateInput').value;
   const [h,m] = time.split(':').map(Number);
   window._startMs = new Date(date).setHours(h,m,0,0);
+
+  // 既に監視中か確認
+  const exists = monitors.find(mo => mo.babaCode===babaCode && mo.rno===rno && mo.bet===currentBet);
+  if (exists) {
+    activeMonitorIdx = monitors.indexOf(exists);
+    switchMonitor(activeMonitorIdx);
+    setStatus(`${babaName} ${rno}R（${time}発走）に切り替えました`, 's-idle');
+  } else {
+    // 自動で監視リストに追加
+    resetData();
+    const monitor = {
+      babaCode, babaName, rno, time,
+      raceName: `${babaName} ${rno}R`,
+      bet: currentBet,
+      oddsHistory: {}, latestData: [], fetchCnt: 0,
+      isHotFlag: false, auto20done: false, auto5done: false, lastAutoFetch: 0,
+    };
+    monitors.push(monitor);
+    activeMonitorIdx = monitors.length - 1;
+    renderMonitorTabs();
+    setStatus(`${babaName} ${rno}R（${time}発走）を監視に追加しました`, 's-idle');
+  }
 }
 
 function buildKeibaUrl() {
