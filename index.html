@@ -26,6 +26,16 @@ h1 { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
 .race-card .rtime { font-size:18px; font-weight:500; }
 .race-card.special .rtime { color:#185FA5; }
 .race-card.special .rno::after { content:'特'; font-size:9px; background:#E6F1FB; color:#185FA5; padding:1px 4px; border-radius:3px; margin-left:4px; }
+
+.monitor-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+.monitor-tab { font-size:12px; padding:5px 12px; border-radius:99px; border:0.5px solid #ccc;
+  cursor:pointer; background:#fff; color:#666; white-space:nowrap; }
+.monitor-tab.active { background:#1a1a18; color:#fff; border-color:#1a1a18; }
+.monitor-tab.hot { border-color:#E24B4A !important; color:#A32D2D; animation:tabpulse 1s infinite; }
+.monitor-tab.hot.active { background:#A32D2D; color:#fff; }
+@keyframes tabpulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+.tab-close { margin-left:5px; font-size:10px; color:#aaa; }
+
 .bet-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
 .bet-tab { font-size:12px; padding:4px 12px; border-radius:99px; border:0.5px solid #ccc; cursor:pointer; background:transparent; color:#666; }
 .bet-tab.active { background:#E6F1FB; color:#185FA5; border-color:#85B7EB; font-weight:500; }
@@ -98,6 +108,8 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
   <div id="raceGrid" class="race-grid"><div class="loading">「レース一覧を読み込む」を押してください</div></div>
 </div>
 
+<div class="sec">監視中のレース</div>
+<div class="monitor-tabs" id="monitorTabs"><span style="font-size:12px;color:#aaa">レースをクリックして追加</span></div>
 <div class="sec">式別</div>
 <div class="bet-tabs">
   <button class="bet-tab active" data-type="tan"        onclick="setBet(this)">単勝</button>
@@ -167,6 +179,77 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 const BET_URL  ={tan:'OddsTanFuku',umaren:'OddsUmLenFuku',umatan:'OddsUmLenTan',wide:'OddsWide',sanrenfuku:'Odds3LenFuku',sanrentan:'Odds3LenTan'};
 const BET_LABEL={tan:'単勝',umaren:'馬連',umatan:'馬単',wide:'ワイド',sanrenfuku:'三連複',sanrentan:'三連単'};
 
+
+// ===== 複数レース監視 =====
+let monitors = []; // [{babaCode,babaName,rno,time,bet,oddsHistory,latestData,fetchCnt,startMs,isHot}]
+let activeIdx = -1;
+
+function saveCurrentToMonitor() {
+  if (activeIdx < 0 || activeIdx >= monitors.length) return;
+  const m = monitors[activeIdx];
+  m.oddsHistory = oddsHistory;
+  m.latestData  = latestData;
+  m.fetchCnt    = fetchCnt;
+  m.startMs     = startMs;
+  m.isHot       = latestData.some(it => isHot(oddsHistory[it.key]||[]));
+}
+
+function loadMonitor(idx) {
+  if (idx < 0 || idx >= monitors.length) return;
+  saveCurrentToMonitor();
+  activeIdx = idx;
+  const m = monitors[idx];
+  selectedBaba     = m.babaCode;
+  selectedBabaName = m.babaName;
+  selectedRno      = m.rno;
+  selectedTime     = m.time;
+  currentBet       = m.bet;
+  oddsHistory      = m.oddsHistory;
+  latestData       = m.latestData;
+  fetchCnt         = m.fetchCnt;
+  startMs          = m.startMs;
+  document.getElementById('fetchCount').textContent = fetchCnt;
+  document.querySelectorAll('.bet-tab').forEach(t => t.classList.toggle('active', t.dataset.type===m.bet));
+  if (latestData.length) {
+    document.getElementById('raceName').style.display='block';
+    document.getElementById('raceMeta').style.display='block';
+  }
+  renderTable();
+  renderMonitorTabs();
+}
+
+function renderMonitorTabs() {
+  const el = document.getElementById('monitorTabs');
+  if (!monitors.length) {
+    el.innerHTML = '<span style="font-size:12px;color:#aaa">レースをクリックして追加</span>';
+    return;
+  }
+  el.innerHTML = monitors.map((m,i) => `
+    <button class="monitor-tab${i===activeIdx?' active':''}${m.isHot?' hot':''}"
+      onclick="loadMonitor(${i})">
+      ${m.isHot?'🔥 ':''}${m.babaName} ${m.rno}R
+      <span class="tab-close" onclick="removeMonitor(event,${i})">✕</span>
+    </button>
+  `).join('');
+}
+
+function removeMonitor(e, idx) {
+  e.stopPropagation();
+  monitors.splice(idx, 1);
+  if (activeIdx >= monitors.length) activeIdx = monitors.length - 1;
+  if (activeIdx >= 0) loadMonitor(activeIdx);
+  else {
+    oddsHistory={}; latestData={}; fetchCnt=0; startMs=null;
+    selectedBaba=null; selectedRno=null; selectedTime=null;
+    document.getElementById('fetchCount').textContent='0';
+    document.getElementById('mainTable').style.display='none';
+    document.getElementById('emptyState').style.display='none';
+    document.getElementById('raceName').style.display='none';
+    document.getElementById('raceMeta').style.display='none';
+  }
+  renderMonitorTabs();
+}
+
 let currentBet='tan', oddsHistory={}, latestData=[], fetchCnt=0;
 let isAuto=false, lastAutoFetch=0;
 let selectedBaba=null, selectedRno=null, selectedTime=null, selectedBabaName=null;
@@ -227,23 +310,52 @@ function selectVenue(i, el) {
 }
 
 function selectRace(babaCode, babaName, rno, time, el) {
-  selectedBaba = babaCode;
-  selectedBabaName = babaName;
-  selectedRno  = rno;
-  selectedTime = time;
-
   document.querySelectorAll('.race-card').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
 
-  // タイマーセット
-  const dateStr = document.getElementById('dateInput').value; // yyyy-MM-dd
+  // タイマー計算
+  const dateStr = document.getElementById('dateInput').value;
   const [h,m] = time.split(':').map(Number);
   const rd = new Date(dateStr + 'T00:00:00');
   rd.setHours(h, m, 0, 0);
-  startMs = rd.getTime();
+  const newStartMs = rd.getTime();
 
-  resetData();
-  setStatus(`${babaName} ${rno}R（${time}発走）を選択しました`, 's-idle');
+  // 既存チェック
+  const exists = monitors.findIndex(mo => mo.babaCode===babaCode && mo.rno===rno && mo.bet===currentBet);
+  if (exists >= 0) {
+    loadMonitor(exists);
+    setStatus(`${babaName} ${rno}R に切り替えました`, 's-idle');
+    return;
+  }
+
+  // 現在のモニターを保存してから新規追加
+  saveCurrentToMonitor();
+  const monitor = {
+    babaCode, babaName, rno, time, bet: currentBet,
+    oddsHistory: {}, latestData: [], fetchCnt: 0,
+    startMs: newStartMs, isHot: false,
+  };
+  monitors.push(monitor);
+  activeIdx = monitors.length - 1;
+
+  // グローバル変数更新
+  selectedBaba     = babaCode;
+  selectedBabaName = babaName;
+  selectedRno      = rno;
+  selectedTime     = time;
+  oddsHistory      = monitor.oddsHistory;
+  latestData       = monitor.latestData;
+  fetchCnt         = 0;
+  startMs          = newStartMs;
+
+  document.getElementById('fetchCount').textContent='0';
+  document.getElementById('mainTable').style.display='none';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('raceName').style.display='none';
+  document.getElementById('raceMeta').style.display='none';
+  document.getElementById('alertBanner').classList.remove('show');
+  renderMonitorTabs();
+  setStatus(`${babaName} ${rno}R（${time}発走）を追加しました`, 's-idle');
 }
 
 function setBet(el) {
@@ -329,6 +441,10 @@ async function doFetch(label){
     document.getElementById('raceMeta').textContent=`【${BET_LABEL[currentBet]}】${data.time}　取得: ${new Date().toLocaleTimeString('ja')}（${label}）`;
     document.getElementById('raceMeta').style.display='block';
     setStatus(`✓ 取得完了（${label}）— ${data.items.length}件　${fetchCnt}回目`,'s-run');
+    saveCurrentToMonitor();
+    // hotチェックしてタブ更新
+    monitors[activeIdx].isHot = latestData.some(it => isHot(oddsHistory[it.key]||[]));
+    renderMonitorTabs();
     renderTable();
   }catch(e){setStatus(`❌ 取得失敗: ${e.message}`,'s-err');}
 }
