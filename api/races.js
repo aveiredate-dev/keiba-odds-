@@ -1,40 +1,66 @@
 export const config = { runtime: 'nodejs' };
 
-const VENUES = [
-  { babaCode:'3',  name:'帯広（ばんえい）' },
-  { babaCode:'10', name:'盛岡' },
-  { babaCode:'11', name:'水沢' },
-  { babaCode:'18', name:'浦和' },
-  { babaCode:'19', name:'船橋' },
-  { babaCode:'20', name:'大井' },
-  { babaCode:'21', name:'川崎' },
-  { babaCode:'22', name:'金沢' },
-  { babaCode:'23', name:'笠松' },
-  { babaCode:'24', name:'名古屋' },
-  { babaCode:'26', name:'園田' },
-  { babaCode:'27', name:'姫路' },
-  { babaCode:'30', name:'高知' },
-  { babaCode:'32', name:'佐賀' },
-];
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { date } = req.query;
-  if (!date) return res.status(400).json({ error: 'dateパラメータが必要です' });
+  try {
+    const response = await fetch('https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/TodayRaceInfoTop', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept-Language': 'ja',
+        'Referer': 'https://www.keiba.go.jp/',
+        'Cache-Control': 'no-cache',
+      }
+    });
+    if (!response.ok) return res.status(500).json({ error: `HTTP ${response.status}` });
 
-  // 全競馬場を並行取得
-  const results = await Promise.all(
-    VENUES.map(v => fetchVenueRaces(v, date))
-  );
+    const buffer = await response.arrayBuffer();
+    let html;
+    try {
+      html = new TextDecoder('euc-jp', { fatal: true }).decode(buffer);
+    } catch(e) {
+      html = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+    }
 
-  const venues = results.filter(v => v && v.races.length > 0);
-  return res.status(200).json({ venues });
-}
+    const venues = [];
 
-async function fetchVenueRaces(venue, date) {
+    // テーブル行を抽出: [競馬場リンク] | 時刻 | 時刻 | ...
+    const rowRe = /\[([^\]]+)\]\(https:\/\/www\.keiba\.go\.jp\/KeibaWeb\/TodayRaceInfo\/RaceList\?k_raceDate=([^&]+)&k_babaCode=(\d+)\)\s*\|(.*?)(?=\n\||\n\n)/gs;
+    let m;
+    while ((m = rowRe.exec(html)) !== null) {
+      const babaName = m[1].trim();
+      const raceDate = decodeURIComponent(m[2]);
+      const babaCode = m[3];
+      const cellsStr = m[4];
+
+      // 各セルから時刻を抽出
+      const cells = cellsStr.split('|').map(c => c.trim());
+      const races = [];
+      let rno = 1;
+      for (const cell of cells) {
+        if (cell === '' || cell === '払戻金') continue;
+        const timeM = cell.match(/(\d{1,2}:\d{2})/);
+        if (timeM) {
+          const special = cell.includes('特別') || cell.includes('重賞') || cell.includes('準重賞');
+          races.push({ rno, time: timeM[1], special });
+          rno++;
+        } else if (cell === '-' || cell === '') {
+          rno++;
+        }
+      }
+
+      if (races.length > 0) {
+        venues.push({ babaCode, babaName: babaName.replace('ば', '（ばんえい）').replace(/ば$/, '（ばんえい）'), races, raceDate });
+      }
+    }
+
+    return res.status(200).json({ venues });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+}async function fetchVenueRaces(venue, date) {
   const url = `https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/RaceList?k_raceDate=${encodeURIComponent(date)}&k_babaCode=${venue.babaCode}`;
   try {
     const response = await fetch(url, {
