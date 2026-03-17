@@ -255,12 +255,13 @@ let isAuto=false, lastAutoFetch=0;
 let selectedBaba=null, selectedRno=null, selectedTime=null, selectedBabaName=null;
 let venuesData=[], startMs=null;
 
-// 今日の日付セット
-const td=new Date();
-document.getElementById('dateInput').value=
-  `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
-
-loadRaces();
+// 今日の日付セット（DOM確実に読み込まれてから）
+document.addEventListener('DOMContentLoaded', function(){
+  const td=new Date();
+  document.getElementById('dateInput').value=
+    `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+  loadRaces();
+});
 
 async function loadRaces() {
   const date = document.getElementById('dateInput').value;
