@@ -272,7 +272,7 @@ function renderMonitorTabs(){
   if(!monitors.length){el.innerHTML='<span style="font-size:12px;color:#aaa">レースをクリックして追加</span>';return;}
   el.innerHTML=monitors.map((m,i)=>
     `<button class="monitor-tab${i===activeIdx?' active':''}${m.isHot?' hot':''}" onclick="loadMonitor(${i})">
-      ${m.isHot?'🔥 ':''}${m.babaName} ${m.rno}R <small>${BET_LABEL[m.bet]}</small>
+      ${m.isHot?'🔥 ':''}${m.babaName} ${m.rno}R
       <span class="tab-close" onclick="removeMonitor(event,${i})">✕</span></button>`
   ).join('');
 }
