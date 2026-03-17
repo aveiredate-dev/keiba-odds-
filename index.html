@@ -349,6 +349,7 @@ async function fetchAllMonitors(label){
       m.isHot=data.items.some(it=>isHot(m.oddsHistory[it.key]||[]));
       if(m.isHot)playAlert();
       if(idx===activeIdx){
+        // グローバル変数とモニターを同期
         oddsHistory=m.oddsHistory;latestData=m.latestData;fetchCnt=m.fetchCnt;
         document.getElementById('fetchCount').textContent=m.fetchCnt;
         document.getElementById('raceName').textContent=data.race||'';
