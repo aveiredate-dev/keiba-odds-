@@ -60,6 +60,10 @@ async function fetchVenueRaces(venue, date) {
     // 開催なしチェック
     if (!html.includes('当日メニュー') || html.includes('ご指定')) return null;
 
+    // 実際の競馬場名をHTMLから取得
+    const nameMatch = html.match(/(\d{4}年\d+月\d+日[^<]*?)([　-鿿]+競馬)/);
+    const actualName = nameMatch ? nameMatch[2].replace('競馬','') : venue.name;
+
     const races = [];
 
     // HTMLのテーブル行からパース
@@ -97,7 +101,7 @@ async function fetchVenueRaces(venue, date) {
     }
 
     if (races.length === 0) return null;
-    return { babaCode: venue.babaCode, babaName: venue.name, races };
+    return { babaCode: venue.babaCode, babaName: actualName || venue.name, races };
   } catch(e) {
     return null;
   }
