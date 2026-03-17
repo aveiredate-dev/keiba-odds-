@@ -499,26 +499,30 @@ function renderTable(){
     ?'<tr><th>馬番</th><th>馬名</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>'
     :'<tr><th>組合せ</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>';
 
-  // latestDataのラベル情報をキーで引けるようにする
   const labelMap={};
   latestData.forEach(it=>labelMap[it.key]=it);
 
-  // oddsHistoryに記録されている全馬を対象に（過去に下降したものも残る）
+  // oddsHistoryの全馬を対象（2回以上データあり）
   const allKeys = Object.keys(oddsHistory).filter(k=>oddsHistory[k].length>=2);
   const rows=allKeys.map(key=>{
     const hist=oddsHistory[key];
     const it=labelMap[key]||{key,label:key,odds:hist[hist.length-1]};
-    const cur=hist[hist.length-1],prev=hist[hist.length-2],p=pctChange(hist);
-    return{it,hist,cur,prev,p};
+    const cur=hist[hist.length-1];
+    const prev=hist[hist.length-2];
+    const pLast=pctChange(hist); // 前回比
+    const pMax=(cur-hist[0])/hist[0]*100; // 初回からの累計変化
+    return{it,hist,cur,prev,pLast,pMax};
   }).filter(r=>{
-    if(r.p>=-0.4||Math.abs(r.p)<thresh)return false;
+    // 累計でthresh以上の下降があれば表示し続ける
+    const effectiveP = Math.min(r.pLast, r.pMax);
+    if(effectiveP>=-0.4||Math.abs(effectiveP)<thresh)return false;
     if(consec>0&&!isConsecutiveDown(r.hist,consec))return false;
     return true;
-  }).sort((a,b)=>a.p-b.p);
+  }).sort((a,b)=>a.pMax-b.pMax);
 
-  const alerts=rows.filter(r=>r.p<=-aThresh);
+  const alerts=rows.filter(r=>r.pMax<=-aThresh);
   const banner=document.getElementById('alertBanner');
-  if(alerts.length){banner.classList.add('show');document.getElementById('alertList').innerHTML=alerts.map(r=>`${r.it.label}：${r.p.toFixed(1)}%（${r.prev.toFixed(1)} → ${r.cur.toFixed(1)}）`).join('<br>');playAlert();}
+  if(alerts.length){banner.classList.add('show');document.getElementById('alertList').innerHTML=alerts.map(r=>`${r.it.label}：${r.pMax.toFixed(1)}%（${r.hist[0].toFixed(1)} → ${r.cur.toFixed(1)}）`).join('<br>');playAlert();}
   else banner.classList.remove('show');
 
   const hotItems=rows.filter(r=>isHot(r.hist));
@@ -528,14 +532,16 @@ function renderTable(){
   document.getElementById('mainTable').style.display='table';
   document.getElementById('emptyState').style.display='none';
 
-  rows.forEach(({it,hist,cur,prev,p})=>{
-    const isAlert=p<=-aThresh,hot=isHot(hist),mark=(isAlert?' 🚨':'')+(hot?' 🔥':'');
+  rows.forEach(({it,hist,cur,prev,pLast,pMax})=>{
+    const isAlert=pMax<=-aThresh,hot=isHot(hist),mark=(isAlert?' 🚨':'')+(hot?' 🔥':'');
     const tr=document.createElement('tr');tr.className=isAlert||hot?'ar':'';
+    const pDisp=pMax.toFixed(1)+'%'; // 累計下降率を表示
+    const prevDisp=hist[0].toFixed(1); // 初回オッズを「前回」列に
     if(isTan){
       const[num,...rest]=it.label.split(' ');
-      tr.innerHTML=`<td><span class="nb${isAlert?' a':''}">${num}</span></td><td class="${isAlert?'hl':''}">${rest.join(' ')}${mark}</td><td style="color:#888">${prev!==null?prev.toFixed(1):'-'}</td><td class="${isAlert?'hl':''}" style="font-weight:500">${cur.toFixed(1)}</td><td><span class="badge ${isAlert?'bda':'bd'}">↓</span></td><td class="${isAlert?'pda':'pd'}">${prev!==null?p.toFixed(1)+'%':'-'}</td><td><div class="spark" onclick="showChart('${it.key}','${it.label}')">${sparkline(hist,isAlert)}</div></td>`;
+      tr.innerHTML=`<td><span class="nb${isAlert?' a':''}">${num}</span></td><td class="${isAlert?'hl':''}">${rest.join(' ')}${mark}</td><td style="color:#888">${prevDisp}</td><td class="${isAlert?'hl':''}" style="font-weight:500">${cur.toFixed(1)}</td><td><span class="badge ${isAlert?'bda':'bd'}">↓</span></td><td class="${isAlert?'pda':'pd'}">${pDisp}</td><td><div class="spark" onclick="showChart('${it.key}','${it.label}')">${sparkline(hist,isAlert)}</div></td>`;
     }else{
-      tr.innerHTML=`<td><span class="nb${isAlert?' a':''}" style="padding:0 5px">${it.label}${mark}</span></td><td style="color:#888">${prev!==null?prev.toFixed(1):'-'}</td><td class="${isAlert?'hl':''}" style="font-weight:500">${cur.toFixed(1)}</td><td><span class="badge ${isAlert?'bda':'bd'}">↓</span></td><td class="${isAlert?'pda':'pd'}">${prev!==null?p.toFixed(1)+'%':'-'}</td><td><div class="spark" onclick="showChart('${it.key}','${it.label}')">${sparkline(hist,isAlert)}</div></td>`;
+      tr.innerHTML=`<td><span class="nb${isAlert?' a':''}" style="padding:0 5px">${it.label}${mark}</span></td><td style="color:#888">${prevDisp}</td><td class="${isAlert?'hl':''}" style="font-weight:500">${cur.toFixed(1)}</td><td><span class="badge ${isAlert?'bda':'bd'}">↓</span></td><td class="${isAlert?'pda':'pd'}">${pDisp}</td><td><div class="spark" onclick="showChart('${it.key}','${it.label}')">${sparkline(hist,isAlert)}</div></td>`;
     }
     tbody.appendChild(tr);
   });
