@@ -499,8 +499,16 @@ function renderTable(){
     ?'<tr><th>馬番</th><th>馬名</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>'
     :'<tr><th>組合せ</th><th>前回</th><th>現在</th><th></th><th>下降率</th><th>推移</th></tr>';
 
-  const rows=latestData.map(it=>{
-    const hist=oddsHistory[it.key]||[it.odds],cur=hist[hist.length-1],prev=hist.length>=2?hist[hist.length-2]:null,p=prev!==null?pctChange(hist):0;
+  // latestDataのラベル情報をキーで引けるようにする
+  const labelMap={};
+  latestData.forEach(it=>labelMap[it.key]=it);
+
+  // oddsHistoryに記録されている全馬を対象に（過去に下降したものも残る）
+  const allKeys = Object.keys(oddsHistory).filter(k=>oddsHistory[k].length>=2);
+  const rows=allKeys.map(key=>{
+    const hist=oddsHistory[key];
+    const it=labelMap[key]||{key,label:key,odds:hist[hist.length-1]};
+    const cur=hist[hist.length-1],prev=hist[hist.length-2],p=pctChange(hist);
     return{it,hist,cur,prev,p};
   }).filter(r=>{
     if(r.p>=-0.4||Math.abs(r.p)<thresh)return false;
