@@ -175,6 +175,88 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
   </div>
 </div>
 
+
+</head>
+<body>
+<h1>🏇 地方競馬 オッズ下降モニター</h1>
+
+<div class="sec">開催レース選択</div>
+<div class="card">
+  <div class="date-row">
+    <input type="date" id="dateInput"/>
+    <button class="btn-sm" onclick="loadRaces()">レース一覧を読み込む</button>
+  </div>
+  <div id="venueTabs" class="venue-tabs"></div>
+  <div id="raceGrid" class="race-grid"><div class="loading">「レース一覧を読み込む」を押してください</div></div>
+</div>
+
+<div class="sec">監視中のレース</div>
+<div class="monitor-tabs" id="monitorTabs"><span style="font-size:12px;color:#aaa">レースをクリックして追加</span></div>
+<div class="sec">式別</div>
+<div class="bet-tabs">
+  <button class="bet-tab active" data-type="tan"        onclick="toggleBet(this)">単勝</button>
+  <button class="bet-tab"        data-type="umaren"     onclick="toggleBet(this)">馬連</button>
+  <button class="bet-tab"        data-type="umatan"     onclick="toggleBet(this)">馬単</button>
+  <button class="bet-tab"        data-type="wide"       onclick="toggleBet(this)">ワイド</button>
+  <button class="bet-tab"        data-type="sanrenfuku" onclick="toggleBet(this)">三連複</button>
+  <button class="bet-tab"        data-type="sanrentan"  onclick="toggleBet(this)">三連単</button>
+</div>
+<div class="filter-row">
+  <label>フィルタ</label>
+  <select id="threshSelect" style="height:28px;font-size:12px;">
+    <option value="0">全て（下降のみ）</option>
+    <option value="5">5%以上下降</option>
+    <option value="10" selected>10%以上下降</option>
+    <option value="20">20%以上下降</option>
+  </select>
+  <label>📉連続</label>
+  <select id="consecutiveFilter" style="height:28px;font-size:12px;">
+    <option value="0">指定なし</option>
+    <option value="2">2回以上連続</option>
+    <option value="3">3回以上連続</option>
+  </select>
+  <label>🚨</label>
+  <select id="alertThresh" style="height:28px;font-size:12px;">
+    <option value="20" selected>20%以上</option>
+    <option value="30">30%以上</option>
+    <option value="50">50%以上</option>
+  </select>
+</div>
+
+<div class="sec">タイマー</div>
+<div class="card">
+  <div class="timer-row">
+    <div class="timer-block"><div class="timer-label">発走まで</div><div class="timer-val" id="tMain">--:--</div></div>
+    <div class="timer-block"><div class="timer-label">自動取得開始まで</div><div class="timer-val" id="t20">--:--</div></div>
+    <div class="timer-block"><div class="timer-label">締切まで</div><div class="timer-val" id="t5">--:--</div></div>
+    <div class="timer-block"><div class="timer-label">取得回数</div><div class="timer-val" id="fetchCount">0</div></div>
+  </div>
+</div>
+
+<div class="btn-row">
+  <button class="btn start" id="btnStart" onclick="startAuto()">▶ 自動取得 開始</button>
+  <button class="btn stop"  id="btnStop"  onclick="stopAuto()" disabled>■ 停止</button>
+  <button class="btn now"   onclick="doFetch('手動')">今すぐ取得</button>
+</div>
+<div id="statusBar" class="status s-idle">レースを選んで「▶ 自動取得 開始」を押してください</div>
+
+<div class="alert-banner" id="alertBanner"><div class="at">🚨 急落を検知</div><div class="al" id="alertList"></div></div>
+<div id="raceName" class="race-name" style="display:none"></div>
+<div id="raceMeta" class="race-meta" style="display:none"></div>
+<table id="mainTable" style="display:none"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+<div id="emptyState" class="empty" style="display:none">下降している組み合わせはありません</div>
+
+<div class="modal-overlay" id="chartModal" onclick="if(event.target.id==='chartModal')document.getElementById('chartModal').classList.remove('show')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" onclick="document.getElementById('chartModal').classList.remove('show')">✕</button>
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px" id="modalMeta"></div>
+    <div class="chart-wrap"><canvas id="modalChart"></canvas></div>
+  </div>
+</div>
+
 <script>
 const BET_URL  ={tan:'OddsTanFuku',umaren:'OddsUmLenFuku',umatan:'OddsUmLenTan',wide:'OddsWide',sanrenfuku:'Odds3LenFuku',sanrentan:'Odds3LenTan'};
 const BET_LABEL={tan:'単勝',umaren:'馬連',umatan:'馬単',wide:'ワイド',sanrenfuku:'三連複',sanrentan:'三連単'};
@@ -255,13 +337,11 @@ let isAuto=false, lastAutoFetch=0;
 let selectedBaba=null, selectedRno=null, selectedTime=null, selectedBabaName=null;
 let venuesData=[], startMs=null;
 
-// 今日の日付セット（DOM確実に読み込まれてから）
-document.addEventListener('DOMContentLoaded', function(){
-  const td=new Date();
-  document.getElementById('dateInput').value=
-    `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
-  loadRaces();
-});
+// 今日の日付セット
+const td=new Date();
+document.getElementById('dateInput').value=
+  `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+loadRaces();
 
 async function loadRaces() {
   const date = document.getElementById('dateInput').value;
@@ -614,5 +694,6 @@ document.getElementById('threshSelect').addEventListener('change',renderTable);
 document.getElementById('alertThresh').addEventListener('change',renderTable);
 document.getElementById('consecutiveFilter').addEventListener('change',renderTable);
 </script>
+
 </body>
 </html>
