@@ -112,12 +112,12 @@ tr.ar td.hl { color:#A32D2D; font-weight:500; }
 <div class="monitor-tabs" id="monitorTabs"><span style="font-size:12px;color:#aaa">レースをクリックして追加</span></div>
 <div class="sec">式別</div>
 <div class="bet-tabs">
-  <button class="bet-tab active" data-type="tan"        onclick="setBet(this)">単勝</button>
-  <button class="bet-tab"        data-type="umaren"     onclick="setBet(this)">馬連</button>
-  <button class="bet-tab"        data-type="umatan"     onclick="setBet(this)">馬単</button>
-  <button class="bet-tab"        data-type="wide"       onclick="setBet(this)">ワイド</button>
-  <button class="bet-tab"        data-type="sanrenfuku" onclick="setBet(this)">三連複</button>
-  <button class="bet-tab"        data-type="sanrentan"  onclick="setBet(this)">三連単</button>
+  <button class="bet-tab active" data-type="tan"        onclick="toggleBet(this)">単勝</button>
+  <button class="bet-tab"        data-type="umaren"     onclick="toggleBet(this)">馬連</button>
+  <button class="bet-tab"        data-type="umatan"     onclick="toggleBet(this)">馬単</button>
+  <button class="bet-tab"        data-type="wide"       onclick="toggleBet(this)">ワイド</button>
+  <button class="bet-tab"        data-type="sanrenfuku" onclick="toggleBet(this)">三連複</button>
+  <button class="bet-tab"        data-type="sanrentan"  onclick="toggleBet(this)">三連単</button>
 </div>
 <div class="filter-row">
   <label>フィルタ</label>
@@ -320,31 +320,37 @@ function selectRace(babaCode, babaName, rno, time, el) {
   rd.setHours(h, m, 0, 0);
   const newStartMs = rd.getTime();
 
-  // 既存チェック
-  const exists = monitors.findIndex(mo => mo.babaCode===babaCode && mo.rno===rno && mo.bet===currentBet);
-  if (exists >= 0) {
-    loadMonitor(exists);
-    setStatus(`${babaName} ${rno}R に切り替えました`, 's-idle');
-    return;
+  // 選択中の全式別を追加
+  saveCurrentToMonitor();
+  let firstNewIdx = -1;
+  for (const bet of selectedBets) {
+    const exists = monitors.findIndex(mo => mo.babaCode===babaCode && mo.rno===rno && mo.bet===bet);
+    if (exists >= 0) continue; // 既存はスキップ
+    const monitor = {
+      babaCode, babaName, rno, time, bet,
+      oddsHistory: {}, latestData: [], fetchCnt: 0,
+      startMs: newStartMs, isHot: false,
+    };
+    monitors.push(monitor);
+    if (firstNewIdx < 0) firstNewIdx = monitors.length - 1;
   }
 
-  // 現在のモニターを保存してから新規追加
-  saveCurrentToMonitor();
-  const monitor = {
-    babaCode, babaName, rno, time, bet: currentBet,
-    oddsHistory: {}, latestData: [], fetchCnt: 0,
-    startMs: newStartMs, isHot: false,
-  };
-  monitors.push(monitor);
-  activeIdx = monitors.length - 1;
+  // 既存のみの場合は最初の既存に切り替え
+  if (firstNewIdx < 0) {
+    const exists = monitors.findIndex(mo => mo.babaCode===babaCode && mo.rno===rno);
+    if (exists >= 0) { loadMonitor(exists); setStatus(`${babaName} ${rno}R に切り替えました`, 's-idle'); return; }
+    firstNewIdx = 0;
+  }
 
-  // グローバル変数更新
+  activeIdx = firstNewIdx;
+  const m = monitors[activeIdx];
   selectedBaba     = babaCode;
   selectedBabaName = babaName;
   selectedRno      = rno;
   selectedTime     = time;
-  oddsHistory      = monitor.oddsHistory;
-  latestData       = monitor.latestData;
+  currentBet       = m.bet;
+  oddsHistory      = m.oddsHistory;
+  latestData       = m.latestData;
   fetchCnt         = 0;
   startMs          = newStartMs;
 
@@ -355,13 +361,28 @@ function selectRace(babaCode, babaName, rno, time, el) {
   document.getElementById('raceMeta').style.display='none';
   document.getElementById('alertBanner').classList.remove('show');
   renderMonitorTabs();
-  setStatus(`${babaName} ${rno}R（${time}発走）を追加しました`, 's-idle');
+  setStatus(`${babaName} ${rno}R（${[...selectedBets].map(b=>BET_LABEL[b]).join('・')}）を追加しました`, 's-idle');
+}
+
+let selectedBets = new Set(['tan']); // 複数選択
+
+function toggleBet(el) {
+  const type = el.dataset.type;
+  if (selectedBets.has(type)) {
+    if (selectedBets.size === 1) return; // 最低1つは残す
+    selectedBets.delete(type);
+    el.classList.remove('active');
+  } else {
+    selectedBets.add(type);
+    el.classList.add('active');
+  }
 }
 
 function setBet(el) {
-  currentBet=el.dataset.type;
-  document.querySelectorAll('.bet-tab').forEach(t=>t.classList.remove('active'));
+  currentBet = el.dataset.type;
+  document.querySelectorAll('.bet-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
+  selectedBets = new Set([currentBet]);
   resetData();
 }
 
