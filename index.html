@@ -399,7 +399,7 @@ function tick(){
     const inWindow=d20<=0 && diff>2*60000;
     if(inWindow && (Date.now()-lastAutoFetch)>=60000){
       lastAutoFetch=Date.now();
-      doFetch(`発走${Math.ceil(diff/60000)}分前 自動`);
+      fetchAllMonitors(`発走${Math.ceil(diff/60000)}分前 自動`);
     }
     if(diff<=0){stopAuto();setStatus('発走しました。自動取得を停止しました。','s-idle');}
   }
@@ -417,6 +417,45 @@ function stopAuto(){
   isAuto=false;
   document.getElementById('btnStart').disabled=false;
   document.getElementById('btnStop').disabled=true;
+}
+
+
+async function fetchAllMonitors(label) {
+  // 全モニターを並行取得
+  const date = document.getElementById('dateInput').value.replace(/-/g,'/');
+  await Promise.all(monitors.map(async (m, idx) => {
+    const url = `https://www.keiba.go.jp/KeibaWeb/TodayRaceInfo/${BET_URL[m.bet]}?k_raceDate=${encodeURIComponent(date)}&k_raceNo=${m.rno}&k_babaCode=${m.babaCode}`;
+    try {
+      const res = await fetch(`/api/odds?url=${encodeURIComponent(url)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.error || !data.items?.length) return;
+      data.items.forEach(it => {
+        if (!m.oddsHistory[it.key]) m.oddsHistory[it.key] = [];
+        m.oddsHistory[it.key].push(it.odds);
+        if (m.oddsHistory[it.key].length > 20) m.oddsHistory[it.key].shift();
+      });
+      m.latestData = data.items;
+      m.fetchCnt++;
+      m.raceName = data.race || m.raceName;
+      m.isHot = data.items.some(it => isHot(m.oddsHistory[it.key]||[]));
+      // アクティブタブなら画面更新
+      if (idx === activeIdx) {
+        oddsHistory = m.oddsHistory;
+        latestData  = m.latestData;
+        fetchCnt    = m.fetchCnt;
+        document.getElementById('fetchCount').textContent = m.fetchCnt;
+        document.getElementById('raceName').textContent   = m.raceName || '';
+        document.getElementById('raceName').style.display = 'block';
+        document.getElementById('raceMeta').textContent   =
+          `【${BET_LABEL[m.bet]}】取得: ${new Date().toLocaleTimeString('ja')}（${label}）`;
+        document.getElementById('raceMeta').style.display = 'block';
+        setStatus(`✓ 取得完了（${label}）— ${data.items.length}件　${m.fetchCnt}回目`, 's-run');
+        renderTable();
+      }
+    } catch(e) {}
+  }));
+  renderMonitorTabs();
 }
 
 async function doFetch(label){
