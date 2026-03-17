@@ -205,8 +205,20 @@ function selectVenue(i,el){
 
 function toggleBet(el){
   const type=el.dataset.type;
-  if(selectedBets.has(type)){if(selectedBets.size===1)return;selectedBets.delete(type);el.classList.remove('active');}
-  else{selectedBets.add(type);el.classList.add('active');}
+  if(selectedBets.has(type)){
+    if(selectedBets.size===1)return;
+    selectedBets.delete(type);
+    el.classList.remove('active');
+  } else {
+    selectedBets.add(type);
+    el.classList.add('active');
+  }
+  // アクティブモニターのbetsも更新
+  if(activeIdx>=0&&activeIdx<monitors.length){
+    monitors[activeIdx].bets=new Set(selectedBets);
+    monitors[activeIdx].bet=[...selectedBets][0];
+    currentBet=monitors[activeIdx].bet;
+  }
 }
 
 function selectRace(babaCode,babaName,rno,time,el){
@@ -216,28 +228,30 @@ function selectRace(babaCode,babaName,rno,time,el){
   const[h,m]=time.split(':').map(Number);
   const rd=new Date(dateStr+'T00:00:00');rd.setHours(h,m,0,0);
   const newStartMs=rd.getTime();
+
+  // 既存チェック（同じレースが既にあれば切り替えるだけ）
+  const exists=monitors.findIndex(mo=>mo.babaCode===babaCode&&mo.rno===rno);
+  if(exists>=0){loadMonitor(exists);setStatus(`${babaName} ${rno}R に切り替えました`,'s-idle');return;}
+
+  // 新規追加（1レース1タブ）
   saveCurrentToMonitor();
-  let firstNew=-1;
-  for(const bet of selectedBets){
-    if(monitors.find(mo=>mo.babaCode===babaCode&&mo.rno===rno&&mo.bet===bet))continue;
-    monitors.push({babaCode,babaName,rno,time,bet,bets:new Set(selectedBets),oddsHistory:{},latestData:[],fetchCnt:0,startMs:newStartMs,isHot:false});
-    if(firstNew<0)firstNew=monitors.length-1;
-  }
-  if(firstNew<0)firstNew=monitors.findIndex(mo=>mo.babaCode===babaCode&&mo.rno===rno);
-  if(firstNew<0)firstNew=0;
-  activeIdx=firstNew;
+  const bet=currentBet;
+  monitors.push({babaCode,babaName,rno,time,bet,bets:new Set([bet]),oddsHistory:{},latestData:[],fetchCnt:0,startMs:newStartMs,isHot:false});
+  activeIdx=monitors.length-1;
   const mo=monitors[activeIdx];
   selectedBaba=mo.babaCode;selectedBabaName=mo.babaName;selectedRno=mo.rno;
-  selectedTime=mo.time;currentBet=mo.bet;oddsHistory=mo.oddsHistory;
-  latestData=mo.latestData;fetchCnt=mo.fetchCnt;startMs=mo.startMs;
-  document.getElementById('fetchCount').textContent=fetchCnt;
+  selectedTime=mo.time;currentBet=mo.bet;
+  selectedBets=new Set([mo.bet]);
+  oddsHistory=mo.oddsHistory;latestData=mo.latestData;fetchCnt=mo.fetchCnt;startMs=mo.startMs;
+  document.getElementById('fetchCount').textContent=0;
   document.getElementById('mainTable').style.display='none';
   document.getElementById('emptyState').style.display='none';
   document.getElementById('raceName').style.display='none';
   document.getElementById('raceMeta').style.display='none';
   document.getElementById('alertBanner').classList.remove('show');
+  document.querySelectorAll('.bet-tab').forEach(t=>t.classList.toggle('active',t.dataset.type===mo.bet));
   renderMonitorTabs();
-  setStatus(`${babaName} ${rno}R（${[...selectedBets].map(b=>BET_LABEL[b]).join('・')}）を追加`,'s-idle');
+  setStatus(`${babaName} ${rno}R を追加しました`,'s-idle');
 }
 
 function saveCurrentToMonitor(){
