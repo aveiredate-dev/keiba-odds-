@@ -373,11 +373,11 @@ function selectRace(babaCode, babaName, rno, time, el) {
   el.classList.add('active');
 
   // タイマーセット
-  const date = document.getElementById('dateInput').value;
-  const [h,m] = time.split(':').map(Number);
-  const raceDate = new Date(date);
-  raceDate.setHours(h, m, 0, 0);
-  window._startMs = raceDate.getTime();
+  const dateVal2 = document.getElementById('dateInput').value; // yyyy-MM-dd
+  const [rh,rm] = time.split(':').map(Number);
+  const rd2 = new Date(dateVal2 + 'T00:00:00');
+  rd2.setHours(rh, rm, 0, 0);
+  window._startMs = rd2.getTime();
 
   // 既に監視中か確認
   const exists = monitors.find(mo => mo.babaCode===babaCode && mo.rno===rno && mo.bet===currentBet);
@@ -577,10 +577,12 @@ function switchMonitor(idx) {
     t.classList.toggle('active', t.dataset.type === m.bet);
   });
   // タイマーリセット
-  const date = document.getElementById('dateInput').value;
   if (m.time) {
+    const dateVal = document.getElementById('dateInput').value; // yyyy-MM-dd
     const [h,mm] = m.time.split(':').map(Number);
-    window._startMs = new Date(date).setHours(h,mm,0,0);
+    const rd = new Date(dateVal + 'T00:00:00');
+    rd.setHours(h, mm, 0, 0);
+    window._startMs = rd.getTime();
   }
   document.getElementById('fetchCount').textContent = m.fetchCnt;
   document.getElementById('raceName').textContent   = m.raceName || '';
