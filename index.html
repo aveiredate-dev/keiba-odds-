@@ -375,7 +375,9 @@ function selectRace(babaCode, babaName, rno, time, el) {
   // タイマーセット
   const date = document.getElementById('dateInput').value;
   const [h,m] = time.split(':').map(Number);
-  window._startMs = new Date(date).setHours(h,m,0,0);
+  const raceDate = new Date(date);
+  raceDate.setHours(h, m, 0, 0);
+  window._startMs = raceDate.getTime();
 
   // 既に監視中か確認
   const exists = monitors.find(mo => mo.babaCode===babaCode && mo.rno===rno && mo.bet===currentBet);
