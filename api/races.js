@@ -23,12 +23,11 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // 日本時間の今日の日付を取得
+  // 日本時間の今日の日付
   const now = new Date();
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const date = `${jst.getUTCFullYear()}/${String(jst.getUTCMonth()+1).padStart(2,'0')}/${String(jst.getUTCDate()).padStart(2,'0')}`;
 
-  // 全競馬場を並行取得
   const results = await Promise.all(
     VENUES.map(v => fetchVenueRaces(v, date))
   );
@@ -58,20 +57,42 @@ async function fetchVenueRaces(venue, date) {
       html = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
     }
 
-    // エラーページチェック
-    if (html.includes('ご指定') || html.includes('情報がありません')) return null;
+    // 開催なしチェック
+    if (!html.includes('当日メニュー') || html.includes('ご指定')) return null;
 
-    // テーブルからレース情報を抽出
-    // | 1R | 14:00 | ... | レース名リンク | ... |
     const races = [];
-    const rowRe = /\|\s*(\d+)R\s*\|\s*(\d{1,2}:\d{2})\s*\|([^|]*)\|([^|]*)\|\s*\[([^\]]+)\]/g;
+
+    // HTMLのテーブル行からパース
+    // <tr> ... <td>1R</td> ... <td>12:25</td> ... <td>[レース名]</td>
+    // まずHTMLタグを保持したままパースする
+
+    // | 1R | 12:25 | ... | [レース名](url) | の形式（markdown変換後）
+    // または生HTMLから直接パース
+    
+    // 生HTMLから行を抽出
+    const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
     let m;
-    while ((m = rowRe.exec(html)) !== null) {
-      const rno      = parseInt(m[1]);
-      const time     = m[2].trim();
-      const kindCell = m[3].trim();
-      const raceName = m[5].trim();
-      const special  = kindCell.includes('特別') || kindCell.includes('重賞') || kindCell.includes('準重賞');
+    while ((m = trRe.exec(html)) !== null) {
+      const row = m[1];
+      // 馬番パターン: <td>数字R</td>
+      const rnoM = row.match(/<td[^>]*>\s*(\d+)R\s*<\/td>/);
+      if (!rnoM) continue;
+      
+      const rno = parseInt(rnoM[1]);
+      
+      // 発走時刻
+      const timeM = row.match(/<td[^>]*>\s*(\d{1,2}:\d{2})\s*<\/td>/);
+      if (!timeM) continue;
+      const time = timeM[1];
+
+      // 競走種類（特別・重賞など）
+      const kindM = row.match(/<td[^>]*>\s*(特別|準重賞|重賞)\s*<\/td>/);
+      const special = !!kindM;
+
+      // レース名（リンクテキスト）
+      const nameM = row.match(/DebaTable[^"]*"[^>]*>([\s\S]*?)<\/a>/);
+      const raceName = nameM ? nameM[1].replace(/<[^>]+>/g,'').trim() : '';
+
       races.push({ rno, time, raceName, special });
     }
 
