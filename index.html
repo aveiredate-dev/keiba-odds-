@@ -297,7 +297,7 @@ function init() {
   }
 
 // 起動時に認証チェック
-checkAuth();
+document.addEventListener("DOMContentLoaded", checkAuth);
 
 const BET_URL  ={tan:'OddsTanFuku',umaren:'OddsUmLenFuku',umatan:'OddsUmLenTan',wide:'OddsWide',sanrenfuku:'Odds3LenFuku',sanrentan:'Odds3LenTan'};
 const BET_LABEL={tan:'単勝',umaren:'馬連',umatan:'馬単',wide:'ワイド',sanrenfuku:'三連複',sanrentan:'三連単'};
