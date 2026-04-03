@@ -509,3 +509,81 @@ loadRaces();
 </div>
 </body>
 </html>
+
+<script async type="text/javascript"
+src="https://js.ad-optima.com/js/interstitial.js?spot=3462"></script>
+
+＜PC＞
+・IS1　ダブルインターステイシャル
+<script async type="text/javascript"
+src="https://js.ad-optima.com/js/interstitial.js?spot=3464"></script>
+
+■buttonで発動する記述（広告タグの下に記述をお願いいたします）
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+   // インターステイシャル発火用の隠しa
+   const interstitialLink = document.createElement('a');
+   interstitialLink.id = 'optimaInterstitialTrigger';
+   interstitialLink.href = '#';
+   interstitialLink.style.cssText =
+'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;';
+   document.body.appendChild(interstitialLink);
+
+   // 二重発火防止用ロック
+   let interstitialLock = false;
+
+   function runWithInterstitial(action) {
+     if (interstitialLock) return;
+     interstitialLock = true;
+
+     try {
+       // まずインステを1回だけ発火
+       interstitialLink.click();
+     } catch (e) {
+       console.warn('Interstitial trigger error:', e);
+     }
+
+     // 元のbutton処理を手動で実行
+     setTimeout(function () {
+       try {
+         action();
+       } finally {
+         // 少し待ってロック解除
+         setTimeout(function () {
+           interstitialLock = false;
+         }, 1000);
+       }
+     }, 0);
+   }
+
+   // ▶ 自動取得開始ボタン
+   const btnStart = document.getElementById('btnStart');
+   if (btnStart) {
+     btnStart.addEventListener('click', function (e) {
+       // 元のonclick="startAuto()" を止める
+       e.preventDefault();
+       e.stopPropagation();
+       e.stopImmediatePropagation();
+
+       runWithInterstitial(function () {
+         startAuto();
+       });
+     }, true);
+   }
+
+   // 今すぐ取得ボタン
+   const btnNow = document.querySelector('.btn.now');
+   if (btnNow) {
+     btnNow.addEventListener('click', function (e) {
+       // 元のonclick="doFetch('手動')" を止める
+       e.preventDefault();
+       e.stopPropagation();
+       e.stopImmediatePropagation();
+
+       runWithInterstitial(function () {
+         doFetch('手動');
+       });
+     }, true);
+   }
+});
+</script>
